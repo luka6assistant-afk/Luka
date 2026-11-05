@@ -2,11 +2,12 @@
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669;
-  --color-brand-700: #047857;
+  --color-brand-50: #e9f7ef;
+  --color-brand-100: #c8ecd6;
+  --color-brand-500: #049e4c;
+  --color-brand-600: #037f3d;
+  --color-brand-700: #036633;
+  --color-ink: #0a3254;
 }
 
 body {

@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
@@ -5,8 +6,8 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-white">
       <header className="border-b border-slate-200">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <span className="text-xl">🧾</span> Luka
+          <Link href="/" aria-label="Luka">
+            <Image src="/logo.png" alt="Luka" width={720} height={292} className="h-8 w-auto" />
           </Link>
           <nav className="flex gap-4 text-sm text-slate-600">
             <Link href="/terminos">Términos</Link>

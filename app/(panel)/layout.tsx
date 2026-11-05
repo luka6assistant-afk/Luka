@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { requireFamily } from '@/lib/session'
@@ -60,7 +61,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🧾</span>
+            <Image src="/luka-icon.png" alt="Luka" width={36} height={36} className="h-9 w-9 rounded-full" />
             <Suspense fallback={<p className="font-semibold">Luka</p>}>
               <FamilyBadge />
             </Suspense>

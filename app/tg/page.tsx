@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { loadTelegram, TG_FLAG } from '@/lib/telegram-webapp'
@@ -47,7 +48,7 @@ export default function TelegramEntry() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
-      <span className="text-4xl">🧾</span>
+      <Image src="/luka-icon.png" alt="Luka" width={96} height={96} priority className="h-24 w-24 rounded-full" />
       {state.kind === 'loading' && <p className="text-sm text-slate-500">Abriendo el panel de tu familia…</p>}
       {state.kind === 'outside' && (
         <>
