@@ -2,10 +2,14 @@ import 'server-only'
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { connection } from 'next/server'
 import { COOKIE_OPTIONS } from './cookie-options'
 
 /** Cliente con la sesión del usuario web (respeta RLS). */
 export async function createClient() {
+  // Supabase lee la hora (Date.now) al validar la sesión. Con Cache Components eso solo se permite
+  // en la petición real, no en el prerenderizado; connection() detiene el prerender aquí.
+  await connection()
   const cookieStore = await cookies()
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
