@@ -8,6 +8,7 @@ import { money } from '@/lib/format'
 import { founderSlots } from '@/lib/growth'
 import { createClient } from '@/lib/supabase/server'
 import { LegalLinks } from '@/components/legal-links'
+import { ChatDemo } from '@/components/chat-demo'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://luka6assistant.vercel.app'
 const DESCRIPTION = `Manden la foto del recibo al grupo de Telegram de la familia y Luka registra el gasto, lo clasifica y les avisa si se pasan del presupuesto. ${TRIAL_DAYS} días gratis.`
@@ -104,7 +105,7 @@ export default function InicioPage() {
               </div>
               <p className="mt-3 text-sm text-slate-600">Sin tarjeta · No se renueva solo · Sus datos son de su familia</p>
             </div>
-            <ChatDemo />
+            <HeroMedia />
           </div>
         </section>
 
@@ -288,41 +289,27 @@ function PriceCard(props: { title: string; price: string; period: string; yearly
   )
 }
 
-/** Ilustración de una conversación con el bot (no son datos reales). */
-function ChatDemo() {
+/**
+ * Video de la portada. Si hay un video real (NEXT_PUBLIC_DEMO_VIDEO: ruta en /public o URL de un .mp4),
+ * se muestra ese; si no, la demostración animada del chat.
+ */
+function HeroMedia() {
+  const video = process.env.NEXT_PUBLIC_DEMO_VIDEO
+  if (!video) return <ChatDemo />
   return (
     <figure className="mx-auto w-full max-w-sm">
-      <div className="rounded-[2rem] border-8 border-ink bg-[#e7ebe4] p-4 shadow-xl">
-        <div className="mb-3 flex items-center gap-2 border-b border-black/10 pb-3">
-          <Image src="/luka-icon.png" alt="" width={32} height={32} className="h-8 w-8 rounded-full bg-white" />
-          <div>
-            <p className="text-sm font-semibold text-ink">Familia Pérez</p>
-            <p className="text-xs text-slate-600">Ana, Juan, Luka</p>
-          </div>
-        </div>
-        <div className="space-y-3 text-sm">
-          <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-sm bg-[#d9fdd3] p-3">
-            <div className="mb-2 flex h-20 items-center justify-center rounded-lg bg-white/70 text-3xl" aria-hidden>
-              🧾
-            </div>
-            <p className="text-slate-800">Mercado de la semana</p>
-          </div>
-          <div className="max-w-[88%] rounded-2xl rounded-bl-sm bg-white p-3 shadow-sm">
-            <p className="font-semibold text-slate-800">✅ Registrado · Gasto</p>
-            <p className="mt-1 text-slate-700">💵 <b>$185.400</b></p>
-            <p className="text-slate-700">🏪 Supermercado · 🏷 🛒 Mercado</p>
-            <p className="text-slate-700">📅 Hoy · 👤 Ana · Nequi</p>
-            <div className="mt-2 grid grid-cols-2 gap-1 text-center text-xs font-medium text-brand-700">
-              <span className="rounded-md bg-slate-100 py-1">✏️ Editar</span>
-              <span className="rounded-md bg-slate-100 py-1">🏷 Categoría</span>
-            </div>
-          </div>
-          <div className="max-w-[88%] rounded-2xl rounded-bl-sm bg-white p-3 text-slate-700 shadow-sm">
-            ⚠️ Mercado: van en 82 % del presupuesto del mes.
-          </div>
-        </div>
-      </div>
-      <figcaption className="mt-3 text-center text-xs text-slate-600">Ejemplo de cómo responde Luka en el grupo</figcaption>
+      <video
+        src={video}
+        poster="/og.png"
+        controls
+        playsInline
+        muted
+        preload="metadata"
+        className="w-full rounded-[2rem] border-8 border-ink bg-ink shadow-xl"
+      >
+        <track kind="captions" srcLang="es" label="Español" src={video.replace(/.mp4$/, '.vtt')} default />
+      </video>
+      <figcaption className="mt-3 text-center text-sm text-slate-600">Así funciona Luka en el grupo de la familia</figcaption>
     </figure>
   )
 }

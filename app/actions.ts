@@ -25,6 +25,8 @@ const nullable = (v: string) => (v === '' ? null : v)
 export async function signIn(_: FormState, fd: FormData): Promise<FormState> {
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({ email: str(fd, 'email'), password: str(fd, 'password') })
+  if (error?.code === 'email_not_confirmed')
+    return { error: 'Primero confirma tu correo: te enviamos un enlace al registrarte (revisa también la carpeta de spam).' }
   if (error) return { error: 'Correo o contraseña incorrectos.' }
   redirect(safeNext(fd.get('next')) ?? '/resumen')
 }
@@ -43,7 +45,7 @@ export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
   if (error) return { error: error.message }
   // Si el correo ya existía, Supabase devuelve un usuario sin identidades: no hay a quién asociar la aceptación
   if (data.user?.identities?.length) await recordConsent(data.user.id)
-  if (!data.session) return { ok: 'Revisa tu correo para confirmar la cuenta y luego inicia sesión.' }
+  if (!data.session) return { ok: 'Te enviamos un correo para confirmar tu cuenta. Abre el enlace y luego inicia sesión (revisa también la carpeta de spam).' }
   redirect(safeNext(fd.get('next')) ?? '/bienvenida')
 }
 
@@ -406,4 +408,33 @@ export async function deleteMyAccount(_: FormState, fd: FormData): Promise<FormS
   if (error) return { error: `No se pudo borrar la cuenta: ${error.message}` }
   await supabase.auth.signOut().catch(() => {})
   redirect('/login?cuenta=borrada')
+}
+
+// ---------------------------------------------------------------------
+// Recuperar la contraseña
+// ---------------------------------------------------------------------
+
+export async function requestPasswordReset(_: FormState, fd: FormData): Promise<FormState> {
+  const email = str(fd, 'email')
+  if (!email) return { error: 'Escribe tu correo.' }
+  const supabase = await createClient()
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/auth/confirm?next=/nueva-clave`,
+  })
+  // Mismo mensaje exista o no la cuenta (no revelamos qué correos están registrados)
+  return { ok: 'Si ese correo tiene cuenta en Luka, te llegará un enlace para crear una contraseña nueva.' }
+}
+
+export async function updatePassword(_: FormState, fd: FormData): Promise<FormState> {
+  const password = str(fd, 'password')
+  if (password.length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' }
+  if (password !== str(fd, 'confirm')) return { error: 'Las dos contraseñas no coinciden.' }
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/recuperar')
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) return { error: 'No se pudo cambiar la contraseña. Pide un enlace nuevo.' }
+  redirect('/resumen')
 }
