@@ -27,6 +27,7 @@ export default async function PresupuestoPage() {
   const totalBudget = categories.filter((c) => c.kind === 'expense').reduce((s, c) => s + Number(c.monthly_budget), 0)
   const threshold = family.alert_threshold ?? 80
   const totalSpent = summary.byCategory.filter((l) => l.budget > 0).reduce((s, l) => s + l.spent, 0)
+  const remainingAll = totalBudget - totalSpent + debtDue
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -77,8 +78,20 @@ export default async function PresupuestoPage() {
             })}
           <div className="flex items-center justify-between border-t border-slate-100 pt-3">
             <p className="text-sm text-slate-600">
-              Total presupuestado: <b>{money(totalBudget)}</b> · quedan{' '}
-              <b className={totalBudget - totalSpent < 0 ? 'text-rose-700' : 'text-brand-700'}>{money(totalBudget - totalSpent)}</b>
+              {debtCuotas > 0 ? (
+                <>
+                  Gastos <b className="tabular-nums">{money(totalBudget)}</b> + cuotas de deudas <b className="tabular-nums">{money(debtCuotas)}</b> ={' '}
+                  <b className="tabular-nums">{money(totalBudget + debtCuotas)}</b> al mes
+                  <br />
+                </>
+              ) : (
+                <>
+                  Total presupuestado: <b className="tabular-nums">{money(totalBudget)}</b> ·{' '}
+                </>
+              )}
+              Quedan este mes{' '}
+              <b className={`tabular-nums ${remainingAll < 0 ? 'text-rose-700' : 'text-brand-700'}`}>{money(remainingAll)}</b>
+              {debtCuotas > 0 && <span className="text-xs text-slate-500"> (gastos {money(totalBudget - totalSpent)} + cuotas por pagar {money(debtDue)})</span>}
             </p>
             {isAdmin ? <SubmitButton>Guardar presupuesto</SubmitButton> : <span className="text-xs text-slate-500">Solo el administrador edita el presupuesto</span>}
           </div>
@@ -100,12 +113,18 @@ export default async function PresupuestoPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-600">Gastos presupuestados</dt>
-              <dd className="font-medium tabular-nums">{money(totalBudget)}</dd>
+              <dd className="font-medium tabular-nums">− {money(totalBudget)}</dd>
             </div>
+            {debtCuotas > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-slate-600">Cuotas de deudas</dt>
+                <dd className="font-medium tabular-nums">− {money(debtCuotas)}</dd>
+              </div>
+            )}
             <div className="flex justify-between border-t border-slate-100 pt-2">
-              <dt className="text-slate-600">Queda para deudas y ahorro</dt>
-              <dd className={`font-semibold tabular-nums ${avgIncome - totalBudget < 0 ? 'text-rose-600' : 'text-brand-700'}`}>
-                {money(avgIncome - totalBudget)}
+              <dt className="text-slate-600">{debtCuotas > 0 ? 'Queda para ahorro' : 'Queda para deudas y ahorro'}</dt>
+              <dd className={`font-semibold tabular-nums ${avgIncome - totalBudget - debtCuotas < 0 ? 'text-rose-600' : 'text-brand-700'}`}>
+                {money(avgIncome - totalBudget - debtCuotas)}
               </dd>
             </div>
           </dl>
