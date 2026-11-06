@@ -9,6 +9,7 @@ import { founderSlots } from '@/lib/growth'
 import { createClient } from '@/lib/supabase/server'
 import { LegalLinks } from '@/components/legal-links'
 import { ChatDemo } from '@/components/chat-demo'
+import { LandingAttribution, TemplateDownload } from '@/components/attribution'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://luka6assistant.vercel.app'
 const DESCRIPTION = `Manden la foto del recibo al grupo de Telegram de la familia y Luka registra el gasto, lo clasifica y les avisa si se pasan del presupuesto. ${TRIAL_DAYS} días gratis.`
@@ -82,6 +83,7 @@ export default function InicioPage() {
         </div>
       </header>
 
+      <LandingAttribution />
       <main id="contenido">
         {/* Portada */}
         <section className="bg-gradient-to-b from-brand-50 to-white">
@@ -138,6 +140,21 @@ export default function InicioPage() {
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        {/* Plantilla gratis */}
+        <section className="mx-auto max-w-6xl px-4 py-16 md:py-20">
+          <div className="grid items-center gap-8 rounded-3xl border border-brand-100 bg-brand-50 p-8 md:grid-cols-[1fr_auto] md:p-10">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">Gratis · sin registrarte</p>
+              <h2 className="mt-2 text-3xl font-bold text-ink">Plantilla de presupuesto familiar en Excel</h2>
+              <p className="mt-3 max-w-2xl text-slate-700">
+                Ingresos, gastos por categoría con alertas de color, deudas con su cuota y saldo, y cuánto les queda para ahorrar: todo se
+                calcula solo. Cuando quieran que se llene sin digitar, súbanla a Luka en un clic.
+              </p>
+            </div>
+            <TemplateDownload className="btn px-6 py-3 text-base">📥 Descargar plantilla (.xlsx)</TemplateDownload>
           </div>
         </section>
 

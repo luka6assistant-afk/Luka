@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { COOKIE_OPTIONS } from './lib/supabase/cookie-options'
 
-const PUBLIC_PATHS = ['/auth/', '/recuperar', '/como-conectar', '/r/', '/robots.txt', '/sitemap.xml', '/login', '/registro', '/terminos', '/privacidad', '/reembolsos', '/cookies', '/tg', '/api/']
+const PUBLIC_PATHS = ['/plantilla-presupuesto-familiar-luka.xlsx', '/auth/', '/recuperar', '/como-conectar', '/r/', '/robots.txt', '/sitemap.xml', '/login', '/registro', '/terminos', '/privacidad', '/reembolsos', '/cookies', '/tg', '/api/']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })

@@ -26,7 +26,13 @@ export function BudgetImport() {
             Archivo
           </label>
           <input id="budget-file" name="file" type="file" required accept=".xlsx,.csv" className="input py-1.5 file:mr-3 file:rounded file:border-0 file:bg-brand-50 file:px-2 file:py-1 file:text-brand-700" />
-          <p className="text-xs text-slate-600">Máximo 2 MB. Si es de Google Sheets: Archivo → Descargar → Microsoft Excel (.xlsx).</p>
+          <p className="text-xs text-slate-600">
+            Máximo 2 MB. Si es de Google Sheets: Archivo → Descargar → Microsoft Excel (.xlsx). ¿No tienes un presupuesto en Excel?{' '}
+            <a href="/plantilla-presupuesto-familiar-luka.xlsx" download className="font-medium text-brand-700 underline">
+              Descarga nuestra plantilla
+            </a>
+            .
+          </p>
           {preview && 'error' in preview && <p className="text-rose-700">{preview.error}</p>}
           <SubmitButton className="btn w-full">Leer archivo</SubmitButton>
         </form>

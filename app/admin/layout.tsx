@@ -15,6 +15,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/cuentas" className="rounded-lg px-3 py-1.5 text-slate-700 hover:bg-slate-100">
               👥 Cuentas
             </Link>
+            <Link href="/admin/fuentes" className="rounded-lg px-3 py-1.5 text-slate-700 hover:bg-slate-100">
+              📣 Fuentes
+            </Link>
             <Link href="/admin/metricas" className="rounded-lg px-3 py-1.5 text-slate-700 hover:bg-slate-100">
               📈 Métricas
             </Link>

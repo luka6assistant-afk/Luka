@@ -61,8 +61,9 @@ export default function PrivacidadPage() {
           recibe directamente la pasarela de pagos (Wompi); nosotros no los conocemos ni los guardamos.
         </li>
         <li>
-          <b>Técnicos:</b> dirección IP y navegador al aceptar esta política (como prueba de tu autorización), y registros técnicos
-          de errores.
+          <b>Técnicos:</b> dirección IP y navegador al aceptar esta política (como prueba de tu autorización), registros técnicos
+          de errores y la fuente por la que llegaste (por ejemplo, la red social o el nombre de la campaña del enlace), para medir
+          nuestra publicidad. Las visitas a la portada solo se cuentan en total por fuente, sin identificar a nadie.
         </li>
       </ul>
       <p>

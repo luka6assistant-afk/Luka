@@ -12,6 +12,7 @@ import { broadcastBudgetAlert, budgetNotice } from '@/lib/ledger'
 import type { Transaction } from '@/lib/types'
 import { recordConsent } from '@/lib/consent'
 import { familyByReferralCode, founderPriceApplies } from '@/lib/growth'
+import { normalizeSource } from '@/lib/attribution'
 import { safeNext } from '@/lib/safe-next'
 
 export type FormState = { error?: string; ok?: string } | undefined
@@ -44,7 +45,13 @@ export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
   const { data, error } = await supabase.auth.signUp({
     email: str(fd, 'email'),
     password: str(fd, 'password'),
-    options: { data: { full_name: str(fd, 'name'), ...(str(fd, 'ref') ? { ref: str(fd, 'ref').toUpperCase().slice(0, 10) } : {}) } },
+    options: {
+      data: {
+        full_name: str(fd, 'name'),
+        ...(str(fd, 'ref') ? { ref: str(fd, 'ref').toUpperCase().slice(0, 10) } : {}),
+        acq: { source: normalizeSource(str(fd, 'src')) || (str(fd, 'ref') ? 'referido' : 'directo'), campaign: normalizeSource(str(fd, 'cmp')) || null },
+      },
+    },
   })
   if (error) return { error: error.message }
   // Si el correo ya existía, Supabase devuelve un usuario sin identidades: no hay a quién asociar la aceptación
@@ -92,6 +99,8 @@ export async function createFamily(_: FormState, fd: FormData): Promise<FormStat
     .from('family_members')
     .insert({ family_id: fam.id, user_id: user.id, display_name: str(fd, 'name') || user.email!, role: 'admin' })
   if (mErr) return { error: mErr.message }
+  const acq = user.user_metadata?.acq
+  if (acq && typeof acq === 'object') await createAdminClient().from('families').update({ acquisition: acq }).eq('id', fam.id)
   const ref = typeof user.user_metadata?.ref === 'string' ? user.user_metadata.ref : ''
   if (ref) {
     const inviter = await familyByReferralCode(ref)

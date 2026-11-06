@@ -12,8 +12,13 @@ function Field() {
   const params = useSearchParams()
   const next = safeNext(params.get('next'))
   const ref = cleanRef(params.get('ref'))
+  // Fuente de la campaña (?src / ?utm_source) para las métricas de adquisición
+  const src = (params.get('src') ?? params.get('utm_source') ?? (ref ? 'referido' : '')).toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)
+  const cmp = (params.get('cmp') ?? params.get('utm_campaign') ?? '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)
   return (
     <>
+      {src && <input type="hidden" name="src" value={src} />}
+      {cmp && <input type="hidden" name="cmp" value={cmp} />}
       {next && <input type="hidden" name="next" value={next} />}
       {ref && <input type="hidden" name="ref" value={ref} />}
       {ref && (
@@ -41,6 +46,10 @@ function KeepNext({ href, children, className }: { href: string; children: React
   const ref = cleanRef(params.get('ref'))
   if (next) q.set('next', next)
   if (ref) q.set('ref', ref)
+  for (const k of ['src', 'cmp']) {
+    const v = params.get(k)
+    if (v && /^[a-z0-9_-]{1,40}$/i.test(v)) q.set(k, v)
+  }
   const qs = q.toString()
   return (
     <Link href={qs ? `${href}?${qs}` : href} className={className}>

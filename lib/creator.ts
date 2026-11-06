@@ -29,6 +29,8 @@ export interface AccountRow {
   last_sign_in_at: string | null
   families: { name: string; role: string }[]
   consent: string | null
+  source: string | null
+  campaign: string | null
 }
 
 export interface FamilyRow {
@@ -47,6 +49,10 @@ export interface FamilyRow {
   lastTx: string | null
   aiThisMonth: number
   admins: string[]
+  source: string | null
+  campaign: string | null
+  connected: boolean
+  paying: boolean
 }
 
 /** Cuentas y familias creadas, para el panel del creador. Usa la llave secreta (salta RLS): solo servidor. */
@@ -64,7 +70,7 @@ export async function loadAccounts() {
 
   const [{ data: families }, { data: members }, { data: txs }, { data: usage }, { data: consents }] = await Promise.all([
     db.from('families').select('*').order('created_at', { ascending: false }),
-    db.from('family_members').select('family_id, user_id, telegram_user_id, role, display_name'),
+    db.from('family_members').select('family_id, user_id, telegram_user_id, whatsapp_phone, role, display_name'),
     db.from('transactions').select('family_id, occurred_on').gte('occurred_on', since).limit(100_000),
     db.from('ai_usage').select('family_id, count').eq('month', monthStart(0)),
     db.from('legal_consents').select('user_id, document, version, accepted_at').order('accepted_at', { ascending: false }),
@@ -87,6 +93,8 @@ export async function loadAccounts() {
         last_sign_in_at: u.last_sign_in_at ?? null,
         families: mine.map((m) => ({ name: famById.get(m.family_id)?.name ?? '—', role: m.role })),
         consent: c ? `${c.version} · ${new Date(c.accepted_at).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}` : null,
+        source: (u.user_metadata?.acq as { source?: string } | undefined)?.source ?? (tg ? 'telegram' : null),
+        campaign: (u.user_metadata?.acq as { campaign?: string | null } | undefined)?.campaign ?? null,
       }
     })
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -113,6 +121,10 @@ export async function loadAccounts() {
       lastTx: ft.map((t) => t.occurred_on).sort().at(-1) ?? null,
       aiThisMonth: used,
       admins: fm.filter((m) => m.role === 'admin' && m.user_id).map((m) => emailById.get(m.user_id!) || m.display_name),
+      source: (fam as Family & { acquisition?: { source?: string } | null }).acquisition?.source ?? null,
+      campaign: (fam as Family & { acquisition?: { campaign?: string | null } | null }).acquisition?.campaign ?? null,
+      connected: !!fam.telegram_chat_id || fm.some((m) => m.whatsapp_phone),
+      paying: a.plan.id !== 'trial' && a.active,
     }
   })
 
