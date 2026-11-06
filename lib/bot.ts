@@ -27,7 +27,7 @@ function panelKeyboard(ctx: Context, start = 'resumen', label = '📊 Abrir pane
   if (!APP_URL.startsWith('https://')) return undefined
   if (ctx.chat?.type === 'private') return new InlineKeyboard().webApp(label, `${APP_URL}/tg?go=${start}`)
   if (BOT_USERNAME && MINI_APP) return new InlineKeyboard().url(label, `https://t.me/${BOT_USERNAME}/${MINI_APP}?startapp=${start}`)
-  return new InlineKeyboard().url(label, APP_URL)
+  return new InlineKeyboard().url(label, `${APP_URL}/resumen`)
 }
 
 export const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN ?? 'missing-token')
@@ -263,7 +263,7 @@ bot.command('plan', async (ctx) => {
 
 bot.command('panel', (ctx) => {
   const kb = panelKeyboard(ctx)
-  if (!kb) return ctx.reply(APP_URL ? `📊 Panel: ${APP_URL}` : 'Configuren NEXT_PUBLIC_APP_URL para mostrar el enlace.')
+  if (!kb) return ctx.reply(APP_URL ? `📊 Panel: ${APP_URL}/resumen` : 'Configuren NEXT_PUBLIC_APP_URL para mostrar el enlace.')
   return ctx.reply('📊 El panel de la familia: movimientos, presupuesto, metas y gráficos.', { reply_markup: kb })
 })
 

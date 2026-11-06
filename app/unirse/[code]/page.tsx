@@ -48,7 +48,7 @@ async function Invitation({ params }: { params: Promise<{ code: string }> }) {
         <div className="text-4xl">🏠</div>
         <h1 className="mt-2 text-lg font-semibold">Ya perteneces a una familia</h1>
         <p className="mt-2 text-sm text-slate-600">Por ahora cada cuenta puede estar en una sola familia.</p>
-        <Link href="/" className="btn mt-4">
+        <Link href="/resumen" className="btn mt-4">
           Ir a mi panel
         </Link>
       </>

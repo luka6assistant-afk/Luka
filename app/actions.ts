@@ -26,7 +26,7 @@ export async function signIn(_: FormState, fd: FormData): Promise<FormState> {
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({ email: str(fd, 'email'), password: str(fd, 'password') })
   if (error) return { error: 'Correo o contraseña incorrectos.' }
-  redirect(safeNext(fd.get('next')) ?? '/')
+  redirect(safeNext(fd.get('next')) ?? '/resumen')
 }
 
 export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
@@ -55,7 +55,7 @@ export async function acceptLegal(_: FormState, fd: FormData): Promise<FormState
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   await recordConsent(user.id)
-  redirect(safeNext(fd.get('next')) ?? '/')
+  redirect(safeNext(fd.get('next')) ?? '/resumen')
 }
 
 export async function signOut() {
@@ -97,7 +97,7 @@ export async function joinFamily(_: FormState, fd: FormData): Promise<FormState>
   const supabase = await createClient()
   const { error } = await supabase.rpc('join_family', { code: str(fd, 'code'), member_name: str(fd, 'name') || 'Miembro' })
   if (error) return { error: error.message.includes('válido') ? 'Código no válido.' : error.message }
-  redirect('/')
+  redirect('/resumen')
 }
 
 export async function renameFamily(fd: FormData) {

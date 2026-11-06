@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { COOKIE_OPTIONS } from './lib/supabase/cookie-options'
 
-const PUBLIC_PATHS = ['/inicio', '/r/', '/robots.txt', '/sitemap.xml', '/login', '/registro', '/terminos', '/privacidad', '/reembolsos', '/cookies', '/tg', '/api/']
+const PUBLIC_PATHS = ['/r/', '/robots.txt', '/sitemap.xml', '/login', '/registro', '/terminos', '/privacidad', '/reembolsos', '/cookies', '/tg', '/api/']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -33,22 +33,18 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p))
-  // Sin sesión, la portada es la página de presentación (la URL sigue siendo "/")
-  if (!user && path === '/') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/inicio'
-    return NextResponse.rewrite(url)
-  }
+  // "/" es la página de presentación: pública para todos, con o sin sesión
+  const isPublic = path === '/' || PUBLIC_PATHS.some((p) => path.startsWith(p))
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    url.search = path === '/' ? '' : `?next=${encodeURIComponent(path)}`
+    url.search = path === '/resumen' ? '' : `?next=${encodeURIComponent(path)}`
     return NextResponse.redirect(url)
   }
   if (user && (path === '/login' || path === '/registro')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/resumen'
+    url.search = ''
     return NextResponse.redirect(url)
   }
   return response

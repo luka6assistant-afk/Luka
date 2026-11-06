@@ -21,7 +21,7 @@ async function Bienvenida() {
   if (!user) redirect('/login')
   if (!(await hasCurrentConsent(supabase, user.id))) redirect('/aceptar')
   const { count } = await supabase.from('family_members').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
-  if (count) redirect('/')
+  if (count) redirect('/resumen')
   const name = (user.user_metadata?.full_name as string | undefined) ?? ''
 
   return (

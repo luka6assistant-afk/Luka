@@ -120,7 +120,7 @@ export async function monthlyReport(db: SupabaseClient, family: Family, month: s
     s.pendingCount ? `\n🕓 Quedan ${s.pendingCount} movimiento(s) por confirmar: /pendientes` : null,
     '',
     `📎 En el archivo van los ${rows.length} movimientos del mes (se abre con Excel o Google Sheets).`,
-    appUrl ? `📊 Más detalle en el panel: ${appUrl}` : null,
+    appUrl ? `📊 Más detalle en el panel: ${appUrl}/resumen` : null,
   ]
   return {
     text: lines.filter((l) => l !== null).join('\n'),

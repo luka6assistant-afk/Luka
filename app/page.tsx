@@ -6,6 +6,7 @@ import { connection } from 'next/server'
 import { FOUNDER, PLANS, REFERRAL_DAYS, TRIAL_DAYS } from '@/lib/plans'
 import { money } from '@/lib/format'
 import { founderSlots } from '@/lib/growth'
+import { createClient } from '@/lib/supabase/server'
 import { LegalLinks } from '@/components/legal-links'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://luka6assistant.vercel.app'
@@ -74,14 +75,9 @@ export default function InicioPage() {
             <a href="#precios" className="hover:text-ink">Precios</a>
             <a href="#preguntas" className="hover:text-ink">Preguntas</a>
           </nav>
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
-              Entrar
-            </Link>
-            <Link href="/registro" className="btn">
-              Probar gratis
-            </Link>
-          </div>
+          <Suspense fallback={<GuestActions />}>
+            <HeaderActions />
+          </Suspense>
         </div>
       </header>
 
@@ -228,6 +224,33 @@ export default function InicioPage() {
         <LegalLinks />
       </footer>
     </div>
+  )
+}
+
+function GuestActions() {
+  return (
+    <div className="flex items-center gap-2">
+      <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+        Entrar
+      </Link>
+      <Link href="/registro" className="btn">
+        Probar gratis
+      </Link>
+    </div>
+  )
+}
+
+/** Con sesión iniciada, el botón lleva al panel; sin sesión, a entrar o registrarse. */
+async function HeaderActions() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return <GuestActions />
+  return (
+    <Link href="/resumen" className="btn">
+      Ir a mi panel
+    </Link>
   )
 }
 

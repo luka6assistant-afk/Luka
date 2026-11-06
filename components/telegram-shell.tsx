@@ -26,7 +26,7 @@ export function TelegramShell() {
   useEffect(() => {
     if (!wa) return
     const back = () => router.back()
-    if (path === '/') wa.BackButton.hide()
+    if (path === '/resumen') wa.BackButton.hide()
     else wa.BackButton.show()
     wa.BackButton.onClick(back)
     return () => wa.BackButton.offClick(back)

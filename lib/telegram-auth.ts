@@ -55,7 +55,7 @@ export function verifyInitData(
 
 /** Páginas a las que puede llevar un botón del bot (?startapp=…). */
 export const START_PATHS: Record<string, string> = {
-  resumen: '/',
+  resumen: '/resumen',
   movimientos: '/movimientos',
   pendientes: '/movimientos?estado=pending',
   presupuesto: '/presupuesto',
@@ -65,5 +65,5 @@ export const START_PATHS: Record<string, string> = {
 }
 
 export function startPath(param: string | null | undefined) {
-  return (param && START_PATHS[param]) || '/'
+  return (param && START_PATHS[param]) || '/resumen'
 }

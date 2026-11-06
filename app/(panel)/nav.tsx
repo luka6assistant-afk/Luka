@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { FEATURES } from '@/lib/features'
 
 const LINKS = [
-  { href: '/', label: '📊 Resumen' },
+  { href: '/resumen', label: '📊 Resumen' },
   { href: '/movimientos', label: '🧾 Movimientos' },
   { href: '/presupuesto', label: '🎯 Presupuesto' },
   ...(FEATURES.debts ? [{ href: '/deudas', label: '💳 Deudas' }] : []),
@@ -20,7 +20,7 @@ export function NavLinks() {
   return (
     <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2">
       {LINKS.map((l) => {
-        const active = l.href === '/' ? path === '/' : path.startsWith(l.href)
+        const active = path.startsWith(l.href)
         return (
           <Link
             key={l.href}
