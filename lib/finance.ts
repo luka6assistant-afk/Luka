@@ -292,17 +292,16 @@ export interface DebtMonthLine {
 
 /** Cuota de cada deuda activa en el mes: cuánto se ha abonado y cuánto falta. */
 export async function getDebtMonth(db: SupabaseClient, familyId: string, month = monthStart(0)): Promise<DebtMonthLine[]> {
-  const [{ data: debts }, { data: pays }] = await Promise.all([
+  const base = () =>
+    db.from('transactions').select('debt_id, amount').eq('family_id', familyId).eq('kind', 'debt_payment').eq('status', 'confirmed')
+  const next = shiftMonth(month, 1)
+  const [{ data: debts }, assigned] = await Promise.all([
     db.from('debts').select('*').eq('family_id', familyId).eq('active', true).order('name'),
-    db
-      .from('transactions')
-      .select('debt_id, amount')
-      .eq('family_id', familyId)
-      .eq('kind', 'debt_payment')
-      .eq('status', 'confirmed')
-      .gte('occurred_on', month)
-      .lt('occurred_on', shiftMonth(month, 1)),
+    // Abonos asignados a la cuota de este mes, o sin mes asignado y con fecha de este mes
+    base().or(`applies_to_month.eq.${month},and(applies_to_month.is.null,occurred_on.gte.${month},occurred_on.lt.${next})`),
   ])
+  // Si aún no se ejecutó la migración 011 (sin columna applies_to_month), se cuenta por la fecha
+  const pays = assigned.error ? (await base().gte('occurred_on', month).lt('occurred_on', next)).data : assigned.data
   return ((debts ?? []) as Debt[]).map((debt) => {
     const paid = (pays ?? []).filter((p) => p.debt_id === debt.id).reduce((s, p) => s + Number(p.amount), 0)
     return { debt, paid, due: Math.max(0, Number(debt.monthly_payment) - paid) }

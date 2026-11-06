@@ -67,6 +67,8 @@ function systemPrompt(ctx: ExtractionContext): string {
       ? '- Cuotas, abonos o pagos de tarjetas, créditos, préstamos, lotes o vehículos son debt_payment; pon en debt_name la deuda que coincida (o null si ninguna coincide).'
       : '- Cuotas, abonos o pagos de tarjetas de crédito y préstamos: kind=expense con la categoría "Deudas" (nunca debt_payment).',
     '- "ahorré", "aparté", "guardé para ..." es saving (aporte a una meta, no es una categoría de gasto). Salario, pago recibido, venta es income.',
+    '- Desprendibles o comprobantes de nómina, pagos que una empresa le hace a la persona, transferencias o consignaciones RECIBIDAS: kind=income (nunca expense). En nómina usa el NETO pagado.',
+    '- Si la fecha del documento es de hace más de 45 días, úsala, pero escríbelo en notes (puede ser un documento viejo) y pon confidence media.',
     '- Si no es un movimiento financiero (memes, fotos, conversación), is_financial=false y amount=0.',
     `- Quien envía el mensaje: ${ctx.senderName}.`,
     '',

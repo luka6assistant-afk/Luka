@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { requireFamily } from '@/lib/session'
 import { shiftMonth } from '@/lib/finance'
-import { dateLabel, money, monthLabel, monthStart, todayISO } from '@/lib/format'
+import { monthChoices, dateLabel, money, monthLabel, monthStart, todayISO } from '@/lib/format'
 import { KIND_LABEL, type Category, type Debt, type Member, type SavingsGoal, type Transaction } from '@/lib/types'
 import { deleteTransaction, updateTransaction } from '@/app/actions'
 import { Card, Empty } from '@/components/cards'
@@ -175,14 +175,14 @@ export default async function MovimientosPage(props: PageProps<'/movimientos'>) 
                         {KIND_LABEL[t.kind]}
                         {t.merchant && t.description ? ` · ${t.description}` : ''}
                         {t.payment_method ? ` · ${t.payment_method}` : ''}
-                        {t.source !== 'web' ? ' · Telegram' : ''}
+                        {t.source.startsWith('telegram') ? ' · Telegram' : t.source.startsWith('whatsapp') ? ' · WhatsApp' : ''}
                       </p>
                     </td>
                     <td>
                       <form action={updateTransaction}>
                         <input type="hidden" name="id" value={t.id} />
                         {t.kind === 'expense' || t.kind === 'income' ? (
-                          <AutoSubmitSelect name="category_id" aria-label="Categoría" defaultValue={t.category_id ?? ''} className="input py-1">
+                          <AutoSubmitSelect key={`c-${t.category_id}`} name="category_id" aria-label="Categoría" defaultValue={t.category_id ?? ''} className="input py-1">
                             <option value="">Sin categoría</option>
                             {categories
                               .filter((c) => c.kind === t.kind)
@@ -193,7 +193,7 @@ export default async function MovimientosPage(props: PageProps<'/movimientos'>) 
                               ))}
                           </AutoSubmitSelect>
                         ) : t.kind === 'debt_payment' ? (
-                          <AutoSubmitSelect name="debt_id" aria-label="Deuda" defaultValue={t.debt_id ?? ''} className="input py-1">
+                          <AutoSubmitSelect key={`d-${t.debt_id}`} name="debt_id" aria-label="Deuda" defaultValue={t.debt_id ?? ''} className="input py-1">
                             <option value="">— Elegir deuda —</option>
                             {(debts ?? []).map((d) => (
                               <option key={d.id} value={d.id}>
@@ -201,8 +201,23 @@ export default async function MovimientosPage(props: PageProps<'/movimientos'>) 
                               </option>
                             ))}
                           </AutoSubmitSelect>
-                        ) : (
-                          <AutoSubmitSelect name="savings_goal_id" aria-label="Meta de ahorro" defaultValue={t.savings_goal_id ?? ''} className="input py-1">
+                        ) : null}
+                        {t.kind === 'debt_payment' ? (
+                          <AutoSubmitSelect
+                            key={`m-${t.applies_to_month}`}
+                            name="applies_to_month"
+                            aria-label="Cuota del mes"
+                            defaultValue={t.applies_to_month ?? t.occurred_on.slice(0, 8) + '01'}
+                            className="input mt-1 py-1 text-xs capitalize"
+                          >
+                            {monthChoices(t.occurred_on).map((o) => (
+                              <option key={o.value} value={o.value}>
+                                Cuota de {o.label}
+                              </option>
+                            ))}
+                          </AutoSubmitSelect>
+                        ) : t.kind === 'saving' ? (
+                          <AutoSubmitSelect key={`g-${t.savings_goal_id}`} name="savings_goal_id" aria-label="Meta de ahorro" defaultValue={t.savings_goal_id ?? ''} className="input py-1">
                             <option value="">— Elegir meta —</option>
                             {(goals ?? []).map((g) => (
                               <option key={g.id} value={g.id}>
@@ -210,7 +225,7 @@ export default async function MovimientosPage(props: PageProps<'/movimientos'>) 
                               </option>
                             ))}
                           </AutoSubmitSelect>
-                        )}
+                        ) : null}
                       </form>
                     </td>
                     <td className="text-slate-600">{members?.find((m) => m.id === t.member_id)?.display_name ?? '—'}</td>

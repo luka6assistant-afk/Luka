@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { addTransaction } from '@/app/actions'
 import { FEATURES } from '@/lib/features'
+import { monthChoices } from '@/lib/format'
 import { ActionForm, SubmitButton } from './ui'
 import type { Category, Debt, Member, SavingsGoal, TxKind } from '@/lib/types'
 
@@ -20,6 +21,7 @@ export function AddTransaction({
   today: string
 }) {
   const [kind, setKind] = useState<TxKind>('expense')
+  const [date, setDate] = useState(today)
   return (
     <ActionForm action={addTransaction} resetOnSuccess className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div>
@@ -37,7 +39,7 @@ export function AddTransaction({
       </div>
       <div>
         <label className="label">Fecha</label>
-        <input aria-label="Fecha" name="occurred_on" type="date" defaultValue={today} className="input" />
+        <input aria-label="Fecha" name="occurred_on" type="date" value={date} onChange={(e) => setDate(e.target.value || today)} className="input" />
       </div>
       {(kind === 'expense' || kind === 'income') && (
         <div>
@@ -61,6 +63,20 @@ export function AddTransaction({
             {debts.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {kind === 'debt_payment' && (
+        <div>
+          <label htmlFor="cuota-mes" className="label">
+            Cuota de
+          </label>
+          <select key={date.slice(0, 7)} id="cuota-mes" name="applies_to_month" defaultValue={date.slice(0, 8) + '01'} className="input capitalize">
+            {monthChoices(date).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
               </option>
             ))}
           </select>

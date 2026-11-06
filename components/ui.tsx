@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef } from 'react'
+import { useActionState, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import type { FormState } from '@/app/actions'
 
@@ -40,9 +40,24 @@ export function ActionForm({
   )
 }
 
-/** Select que envía su formulario al cambiar. */
-export function AutoSubmitSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} onChange={(e) => e.currentTarget.form?.requestSubmit()} />
+/**
+ * Select que envía su formulario al cambiar. Es controlado: React reinicia los campos no controlados
+ * al terminar una acción de formulario, y el valor elegido parecía "devolverse" aunque sí se guardaba.
+ */
+export function AutoSubmitSelect({ defaultValue, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  const [value, setValue] = useState(defaultValue ?? '')
+  return (
+    <select
+      {...props}
+      value={value as string}
+      onChange={(e) => {
+        setValue(e.target.value)
+        const form = e.currentTarget.form
+        // Espera a que React aplique el nuevo valor antes de enviar
+        queueMicrotask(() => form?.requestSubmit())
+      }}
+    />
+  )
 }
 
 /** Botón que pide confirmación antes de enviar. */

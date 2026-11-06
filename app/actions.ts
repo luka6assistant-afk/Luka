@@ -19,6 +19,8 @@ export type FormState = { error?: string; ok?: string } | undefined
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim()
 const amount = (fd: FormData, k: string) => parseCOP(str(fd, k) || '0') ?? 0
 const nullable = (v: string) => (v === '' ? null : v)
+/** Primer día de un mes en formato YYYY-MM-01 */
+const isMonthStart = (v: string) => /^\d{4}-\d{2}-01$/.test(v)
 
 // ---------------------------------------------------------------------
 // Autenticación
@@ -200,6 +202,7 @@ export async function addTransaction(_: FormState, fd: FormData): Promise<FormSt
     description: nullable(str(fd, 'description')),
     category_id: kind === 'expense' || kind === 'income' ? nullable(str(fd, 'category_id')) : null,
     debt_id: kind === 'debt_payment' ? nullable(str(fd, 'debt_id')) : null,
+    ...(kind === 'debt_payment' && isMonthStart(str(fd, 'applies_to_month')) ? { applies_to_month: str(fd, 'applies_to_month') } : {}),
     savings_goal_id: kind === 'saving' ? nullable(str(fd, 'savings_goal_id')) : null,
     member_id: nullable(str(fd, 'member_id')) ?? member.id,
     payment_method: nullable(str(fd, 'payment_method')),
@@ -220,6 +223,10 @@ export async function updateTransaction(fd: FormData) {
   const patch: Record<string, unknown> = {}
   for (const k of ['category_id', 'debt_id', 'savings_goal_id', 'status', 'occurred_on', 'description', 'kind']) {
     if (fd.has(k)) patch[k] = nullable(str(fd, k))
+  }
+  if (fd.has('applies_to_month')) {
+    const v = str(fd, 'applies_to_month')
+    patch.applies_to_month = isMonthStart(v) ? v : null
   }
   if (fd.has('amount')) patch.amount = amount(fd, 'amount')
   const { data: tx } = await supabase.from('transactions').update(patch).eq('id', str(fd, 'id')).eq('family_id', family.id).select().maybeSingle()

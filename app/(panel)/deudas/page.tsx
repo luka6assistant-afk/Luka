@@ -1,6 +1,6 @@
 import { requireFamily } from '@/lib/session'
 import { debtPayoff, getDebtMonth, multiDebtPlan } from '@/lib/finance'
-import { money, monthLabel, monthStart, parseCOP } from '@/lib/format'
+import { dateLabel, money, monthLabel, monthStart, parseCOP } from '@/lib/format'
 import type { Debt } from '@/lib/types'
 import { archiveDebt, quickMovement, saveDebt } from '@/app/actions'
 import { Card, Empty, Progress, Stat } from '@/components/cards'
@@ -53,7 +53,19 @@ export default async function DeudasPage(props: PageProps<'/deudas'>) {
   if (!(await getAccess(supabase, family)).plan.debts) return <PlusUpsell feature="El plan de deudas" />
   const { data } = await supabase.from('debts').select('*').eq('family_id', family.id).eq('active', true).order('balance', { ascending: false })
   const debts = (data ?? []) as Debt[]
-  const month = await getDebtMonth(supabase, family.id)
+  const [month, { data: payRows }, { data: memberRows }] = await Promise.all([
+    getDebtMonth(supabase, family.id),
+    supabase
+      .from('transactions')
+      .select('id, debt_id, occurred_on, amount, applies_to_month, member_id, payment_method, status')
+      .eq('family_id', family.id)
+      .eq('kind', 'debt_payment')
+      .order('occurred_on', { ascending: false })
+      .limit(300),
+    supabase.from('family_members').select('id, display_name').eq('family_id', family.id),
+  ])
+  const payments = payRows ?? []
+  const who = (id: string | null) => memberRows?.find((m) => m.id === id)?.display_name ?? '—'
   const dueTotal = month.reduce((s, l) => s + l.due, 0)
 
   const total = debts.reduce((s, d) => s + Number(d.balance), 0)
@@ -107,6 +119,43 @@ export default async function DeudasPage(props: PageProps<'/deudas'>) {
                       ? '🎉 Pagada'
                       : `Terminan de pagar en ${plan.months} meses (${monthLabel(plan.payoffDate!)}) · intereses ≈ ${money(plan.totalInterest)}`}
                 </p>
+                {(() => {
+                  const mine = payments.filter((p) => p.debt_id === d.id)
+                  if (!mine.length) return <p className="mt-3 text-xs text-slate-600">Aún no hay pagos registrados a esta deuda.</p>
+                  const total = mine.filter((p) => p.status === 'confirmed').reduce((s, p) => s + Number(p.amount), 0)
+                  return (
+                    <details className="mt-3 rounded-lg border border-slate-200 p-3">
+                      <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                        🧾 Pagos registrados ({mine.length}) · total {money(total)}
+                      </summary>
+                      <table className="mt-2 w-full text-xs">
+                        <caption className="sr-only">Pagos registrados a {d.name}</caption>
+                        <thead className="text-left text-slate-600">
+                          <tr>
+                            <th scope="col" className="py-1">Fecha</th>
+                            <th scope="col">Cuota de</th>
+                            <th scope="col">Quién</th>
+                            <th scope="col" className="text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 tabular-nums">
+                          {mine.slice(0, 24).map((p) => (
+                            <tr key={p.id} className={p.status === 'pending' ? 'text-slate-500' : ''}>
+                              <td className="py-1">{dateLabel(p.occurred_on)}</td>
+                              <td className="capitalize">{monthLabel(p.applies_to_month ?? p.occurred_on.slice(0, 8) + '01')}</td>
+                              <td>{who(p.member_id)}</td>
+                              <td className="text-right">
+                                {money(p.amount)}
+                                {p.status === 'pending' ? ' (por confirmar)' : ''}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <p className="mt-2 text-xs text-slate-600">Para corregir un pago (fecha, deuda o mes de la cuota), edítalo en Movimientos.</p>
+                    </details>
+                  )
+                })()}
                 <form action={quickMovement} className="mt-4 flex gap-2">
                   <input type="hidden" name="kind" value="debt_payment" />
                   <input type="hidden" name="target_id" value={d.id} />

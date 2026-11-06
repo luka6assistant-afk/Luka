@@ -121,7 +121,7 @@ export default async function FamiliaPage() {
                   <>
                     <form action={setMemberRole}>
                       <input type="hidden" name="id" value={m.id} />
-                      <AutoSubmitSelect name="role" aria-label={`Rol de ${m.display_name}`} defaultValue={m.role} className="input py-1 text-xs">
+                      <AutoSubmitSelect key={`r-${m.role}`} name="role" aria-label={`Rol de ${m.display_name}`} defaultValue={m.role} className="input py-1 text-xs">
                         <option value="admin">Administrador</option>
                         <option value="member">Miembro</option>
                       </AutoSubmitSelect>

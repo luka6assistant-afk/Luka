@@ -83,6 +83,8 @@ export interface Transaction {
   payment_method: string | null
   source: 'telegram_photo' | 'telegram_text' | 'telegram_audio' | 'whatsapp_photo' | 'whatsapp_text' | 'whatsapp_audio' | 'web'
   receipt_path: string | null
+  /** Abonos a deudas: mes de la cuota que paga (YYYY-MM-01); null = el mes de la fecha */
+  applies_to_month?: string | null
   transcript: string | null
   edit_prompt_message_id: number | null
   latency_ms: number | null

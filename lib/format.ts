@@ -58,3 +58,15 @@ export function parseCOP(input: string): number | null {
   const n = Number(s)
   return Number.isFinite(n) && n >= 0 ? Math.round(n * mult * 100) / 100 : null
 }
+
+/** Meses alrededor de una fecha (anterior, el mismo y el siguiente) para elegir a qué cuota corresponde un abono. */
+export function monthChoices(isoDate: string): { value: string; label: string }[] {
+  const [y, m] = isoDate.split('-').map(Number)
+  return [-1, 0, 1].map((d) => {
+    const dt = new Date(Date.UTC(y, m - 1 + d, 1))
+    return {
+      value: dt.toISOString().slice(0, 10),
+      label: new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(dt),
+    }
+  })
+}
