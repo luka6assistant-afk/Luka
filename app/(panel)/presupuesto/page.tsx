@@ -2,7 +2,8 @@ import { requireFamily } from '@/lib/session'
 import { getHistory, getMonthSummary } from '@/lib/finance'
 import { money } from '@/lib/format'
 import type { Category } from '@/lib/types'
-import { addCategory, deleteCategory, saveBudgets } from '@/app/actions'
+import { addCategory, deleteCategory, saveAlertThreshold, saveBudgets } from '@/app/actions'
+import { BudgetImport } from '@/components/budget-import'
 import { Card, Progress } from '@/components/cards'
 import { ConfirmButton, SubmitButton } from '@/components/ui'
 
@@ -17,6 +18,8 @@ export default async function PresupuestoPage() {
   const closed = history.slice(0, -1).filter((p) => p.income > 0)
   const avgIncome = closed.length ? closed.reduce((s, p) => s + p.income, 0) / closed.length : summary.income
   const totalBudget = categories.filter((c) => c.kind === 'expense').reduce((s, c) => s + Number(c.monthly_budget), 0)
+  const threshold = family.alert_threshold ?? 80
+  const totalSpent = summary.byCategory.filter((l) => l.budget > 0).reduce((s, l) => s + l.spent, 0)
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -38,6 +41,12 @@ export default async function PresupuestoPage() {
                       </span>
                     </div>
                     <Progress value={line?.spent ?? 0} max={Number(c.monthly_budget)} projected={line?.projected} />
+                    {Number(c.monthly_budget) > 0 && line && (
+                      <p className={`mt-1 text-xs tabular-nums ${line.remaining < 0 ? 'font-medium text-rose-700' : line.spent / line.budget >= threshold / 100 ? 'font-medium text-amber-700' : 'text-slate-600'}`}>
+                        {line.remaining >= 0 ? `Quedan ${money(line.remaining)}` : `Se pasaron por ${money(-line.remaining)}`}
+                        {line.pending > 0 && <span className="font-normal text-slate-500"> · {money(line.pending)} por confirmar</span>}
+                      </p>
+                    )}
                   </div>
                   <input
                     name={`budget:${c.id}`}
@@ -61,7 +70,8 @@ export default async function PresupuestoPage() {
             })}
           <div className="flex items-center justify-between border-t border-slate-100 pt-3">
             <p className="text-sm text-slate-600">
-              Total presupuestado: <b>{money(totalBudget)}</b>
+              Total presupuestado: <b>{money(totalBudget)}</b> · quedan{' '}
+              <b className={totalBudget - totalSpent < 0 ? 'text-rose-700' : 'text-brand-700'}>{money(totalBudget - totalSpent)}</b>
             </p>
             {isAdmin ? <SubmitButton>Guardar presupuesto</SubmitButton> : <span className="text-xs text-slate-500">Solo el administrador edita el presupuesto</span>}
           </div>
@@ -96,6 +106,32 @@ export default async function PresupuestoPage() {
             Regla de referencia 50/30/20: {money(avgIncome * 0.5)} necesidades · {money(avgIncome * 0.3)} gustos · {money(avgIncome * 0.2)} ahorro y deudas.
           </p>
         </Card>
+
+        <Card title="🔔 Alertas de presupuesto">
+          <p className="text-sm text-slate-700">
+            Luka avisa en el chat una vez cuando una categoría llega al {threshold} % y otra cuando llega al 100 %. Cada movimiento
+            muestra cuánto queda.
+          </p>
+          {isAdmin && (
+            <form action={saveAlertThreshold} className="mt-3 flex items-end gap-2">
+              <div className="flex-1">
+                <label htmlFor="threshold" className="label">
+                  Avisar cuando se use el
+                </label>
+                <select id="threshold" name="threshold" defaultValue={threshold} className="input">
+                  {[50, 60, 70, 75, 80, 85, 90, 95].map((v) => (
+                    <option key={v} value={v}>
+                      {v} % del presupuesto
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <SubmitButton>Guardar</SubmitButton>
+            </form>
+          )}
+        </Card>
+
+        {isAdmin && <BudgetImport />}
 
         {isAdmin && (
         <Card title="Nueva categoría">

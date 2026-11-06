@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^1.5.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
+    "exceljs": "^4.4.0",
     "grammy": "^1.46.0",
     "next": "16.4.5",
     "react": "19.3.0",
@@ -29,5 +30,8 @@
     "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

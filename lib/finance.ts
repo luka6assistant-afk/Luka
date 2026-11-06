@@ -118,9 +118,14 @@ export function requiredMonthly(goal: SavingsGoal): number | null {
 
 export interface CategoryLine {
   category: Category
+  /** Gastado (movimientos confirmados) */
   spent: number
   budget: number
   projected: number
+  /** Lo que queda del presupuesto (negativo si se pasaron) */
+  remaining: number
+  /** Gastos por confirmar en esta categoría (aún no descuentan del presupuesto) */
+  pending: number
 }
 
 export interface MonthSummary {
@@ -146,9 +151,8 @@ export async function getMonthSummary(
   const [{ data: txs }, { data: cats }, { count: pendingCount }] = await Promise.all([
     db
       .from('transactions')
-      .select('kind, amount, category_id')
+      .select('kind, amount, category_id, status')
       .eq('family_id', familyId)
-      .eq('status', 'confirmed')
       .gte('occurred_on', month)
       .lt('occurred_on', next),
     db.from('categories').select('*').eq('family_id', familyId).order('name'),
@@ -159,7 +163,9 @@ export async function getMonthSummary(
       .eq('status', 'pending'),
   ])
 
-  const rows = (txs ?? []) as Pick<Transaction, 'kind' | 'amount' | 'category_id'>[]
+  const all = (txs ?? []) as Pick<Transaction, 'kind' | 'amount' | 'category_id' | 'status'>[]
+  const rows = all.filter((t) => t.status === 'confirmed')
+  const pendingRows = all.filter((t) => t.status === 'pending')
   const sum = (k: string) => rows.filter((t) => t.kind === k).reduce((s, t) => s + Number(t.amount), 0)
 
   // Factor de proyección: solo aplica al mes en curso
@@ -174,7 +180,11 @@ export async function getMonthSummary(
       const spent = rows
         .filter((t) => t.kind === 'expense' && t.category_id === category.id)
         .reduce((s, t) => s + Number(t.amount), 0)
-      return { category, spent, budget: Number(category.monthly_budget), projected: Math.round(spent * factor) }
+      const budget = Number(category.monthly_budget)
+      const pending = pendingRows
+        .filter((t) => t.kind === 'expense' && t.category_id === category.id)
+        .reduce((s, t) => s + Number(t.amount), 0)
+      return { category, spent, budget, projected: Math.round(spent * factor), remaining: budget - spent, pending }
     })
     .sort((a, b) => b.spent - a.spent)
 

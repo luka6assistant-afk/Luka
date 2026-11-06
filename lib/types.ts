@@ -18,6 +18,7 @@ export interface Family {
   referred_by?: string | null
   referral_rewarded_at?: string | null
   onboarding_sent?: string[]
+  alert_threshold?: number
   created_at?: string
 }
 

@@ -56,6 +56,19 @@ export default async function ResumenPage() {
         </Link>
       )}
 
+      {summary.byCategory
+        .filter((c) => c.budget > 0 && c.spent / c.budget >= (family.alert_threshold ?? 80) / 100)
+        .map((c) => (
+          <Link
+            key={c.category.id}
+            href="/presupuesto"
+            className={`block rounded-2xl border p-4 text-sm ${c.remaining < 0 ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}
+          >
+            {c.remaining < 0 ? '🚨' : '⚠️'} <b>{c.category.icon} {c.category.name}</b>: van en {Math.round((c.spent / c.budget) * 100)} % del presupuesto ·{' '}
+            {c.remaining >= 0 ? `quedan ${money(c.remaining)}` : `se pasaron por ${money(-c.remaining)}`}
+          </Link>
+        ))}
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label={`Ingresos ${monthLabel(summary.month)}`} value={money(summary.income)} tone="good" />
         <Stat
@@ -125,6 +138,11 @@ export default async function ResumenPage() {
                       </span>
                     </div>
                     <Progress value={c.spent} max={c.budget} projected={c.projected} />
+                    {c.budget > 0 && (
+                      <p className={`mt-0.5 text-right text-xs tabular-nums ${c.remaining < 0 ? 'text-rose-700' : 'text-slate-600'}`}>
+                        {c.remaining >= 0 ? `Quedan ${money(c.remaining)}` : `Se pasaron por ${money(-c.remaining)}`}
+                      </p>
+                    )}
                   </li>
                 ))}
             </ul>

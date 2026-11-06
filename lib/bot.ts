@@ -11,7 +11,7 @@ import { PLANS, REFERRAL_DAYS, getAccess } from './plans'
 import { LEGAL } from './legal'
 import { FEATURES } from './features'
 import { escapeHtml, goalsHtml, planHtml, summaryHtml } from './replies'
-import { applyEdit, confirmTx, deleteTx, getFamilyTx, loadContext, memberName, recordMovement, setCategory } from './ledger'
+import { alertHtml, applyEdit, budgetNotice, confirmTx, deleteTx, getFamilyTx, loadContext, memberName, recordMovement, setCategory } from './ledger'
 import { KIND_LABEL, type Category, type Debt, type Family, type Member, type SavingsGoal, type Transaction } from './types'
 
 const db = createAdminClient()
@@ -439,10 +439,11 @@ async function registerFrom(
     return
   }
   let text = txCard(r.tx, r.ctx.categories, r.ctx.debts, r.ctx.goals, member.display_name, r.ex)
-  if (r.warning) text += `
+  if (r.notice.line) text += `
 
-${r.warning}`
+${escapeHtml(r.notice.line)}`
   await ctx.reply(text, { parse_mode: 'HTML', reply_markup: txKeyboard(r.tx), ...reply })
+  if (r.notice.alert) await ctx.reply(alertHtml(r.notice.alert), { parse_mode: 'HTML' })
 }
 
 bot.on('message:photo', async (ctx) => {
@@ -532,12 +533,17 @@ async function txForCallback(ctx: Context, id: string) {
   return tx ? { fam, tx } : null
 }
 
-async function refreshCard(ctx: Context, famId: string, tx: Transaction) {
-  const { categories, debts, goals } = await loadContext(famId)
-  await ctx.editMessageText(txCard(tx, categories, debts, goals, await memberName(tx.member_id)), {
+async function refreshCard(ctx: Context, fam: Family, tx: Transaction) {
+  const { categories, debts, goals } = await loadContext(fam.id)
+  const notice = await budgetNotice(fam, tx)
+  const card = txCard(tx, categories, debts, goals, await memberName(tx.member_id))
+  await ctx.editMessageText(notice.line ? `${card}
+
+${escapeHtml(notice.line)}` : card, {
     parse_mode: 'HTML',
     reply_markup: txKeyboard(tx),
   })
+  if (notice.alert) await ctx.reply(alertHtml(notice.alert), { parse_mode: 'HTML' })
 }
 
 bot.callbackQuery(/^ed:(.+)$/, async (ctx) => {
@@ -568,12 +574,17 @@ async function handleEditReply(ctx: Context, promptId: number, instruction: stri
     await ctx.reply(r.text)
     return true
   }
+  const notice = await budgetNotice(fam, r.tx)
+  const card = txCard(r.tx, r.ctx.categories, r.ctx.debts, r.ctx.goals, await memberName(r.tx.member_id))
   await ctx.reply(`✏️ Corregido
 
-${txCard(r.tx, r.ctx.categories, r.ctx.debts, r.ctx.goals, await memberName(r.tx.member_id))}`, {
+${card}${notice.line ? `
+
+${escapeHtml(notice.line)}` : ''}`, {
     parse_mode: 'HTML',
     reply_markup: txKeyboard(r.tx),
   })
+  if (notice.alert) await ctx.reply(alertHtml(notice.alert), { parse_mode: 'HTML' })
   return true
 }
 
@@ -582,7 +593,7 @@ bot.callbackQuery(/^ok:(.+)$/, async (ctx) => {
   if (!found) return ctx.answerCallbackQuery('No encontrado')
   const saved = await confirmTx(found.tx)
   await ctx.answerCallbackQuery('Confirmado ✅')
-  await refreshCard(ctx, found.fam.id, saved)
+  await refreshCard(ctx, found.fam, saved)
 })
 
 bot.callbackQuery(/^del:(.+)$/, async (ctx) => {
@@ -615,7 +626,7 @@ bot.callbackQuery(/^sc:(.+):(\d+)$/, async (ctx) => {
   const r = await setCategory(found.tx, Number(ctx.match[2]))
   if (!r) return ctx.answerCallbackQuery('Categoría no válida')
   await ctx.answerCallbackQuery(`${r.category.icon} ${r.category.name}`)
-  await refreshCard(ctx, found.fam.id, r.tx)
+  await refreshCard(ctx, found.fam, r.tx)
 })
 
 bot.catch((err) => console.error('Error del bot', err.error))

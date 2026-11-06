@@ -1,7 +1,7 @@
 import 'server-only'
 import { createHash, randomBytes } from 'node:crypto'
 import { createAdminClient } from '../supabase/server'
-import { applyEdit, confirmTx, deleteTx, getFamilyTx, loadContext, memberName, recordMovement, setCategory } from '../ledger'
+import { applyEdit, broadcastBudgetAlert, budgetNotice, confirmTx, deleteTx, getFamilyTx, loadContext, memberName, recordMovement, setCategory } from '../ledger'
 import { goalsHtml, planHtml, summaryHtml } from '../replies'
 import { monthlyReport } from '../reports'
 import { transcribe, transcriptionEnabled } from '../transcribe'
@@ -168,7 +168,7 @@ async function handleText(l: Linked, msg: WaMessage, text: string) {
     if (tx) {
       const r = await applyEdit(l.fam, tx, text)
       if (!r.ok) return sendText(phone, r.text)
-      return sendButtons(phone, `✏️ Corregido\n\n${waCard(r.tx, r.ctx, await memberName(r.tx.member_id))}`, cardButtons(r.tx))
+      return sendCard(l, phone, r.tx, '✏️ Corregido\n\n')
     }
   }
 
@@ -265,8 +265,24 @@ async function register(
   if (r.status === 'not_financial')
     return sendText(msg.from, `No encontré un monto en ${source === 'whatsapp_audio' ? 'la nota de voz' : source === 'whatsapp_text' ? 'el mensaje' : 'esa imagen'}. Si es un gasto, escríbelo, ej: «farmacia 35.000».`, msg.id)
   let body = waCard(r.tx, r.ctx, l.member.display_name, r.ex)
-  if (r.warning) body += `\n\n${r.warning}`
-  return sendButtons(msg.from, body, cardButtons(r.tx), msg.id)
+  if (r.notice.line) body += `\n\n${r.notice.line}`
+  await sendButtons(msg.from, body, cardButtons(r.tx), msg.id)
+  await announce(l, msg.from, r.notice.alert)
+}
+
+/** Envía la alerta de presupuesto a quien registró y al grupo de Telegram de la familia, si lo tiene. */
+async function announce(l: Linked, phone: string, alert: string | null) {
+  if (!alert) return
+  await sendText(phone, alert)
+  await broadcastBudgetAlert(l.fam, alert)
+}
+
+/** Tarjeta actualizada (con lo que queda del presupuesto) y alerta si cruzó un tope. */
+async function sendCard(l: Linked, phone: string, tx: Transaction, prefix = '') {
+  const notice = await budgetNotice(l.fam, tx)
+  const card = waCard(tx, await loadContext(l.fam.id), await memberName(tx.member_id))
+  await sendButtons(phone, `${prefix}${card}${notice.line ? `\n\n${notice.line}` : ''}`, cardButtons(tx))
+  await announce(l, phone, notice.alert)
 }
 
 // ---------------------------------------------------------------------
@@ -281,8 +297,7 @@ async function handleAction(l: Linked, phone: string, id: string) {
   if (!tx) return sendText(phone, 'Ese movimiento ya no existe.')
 
   if (action === 'ok') {
-    const saved = await confirmTx(tx)
-    return sendButtons(phone, `✅ Confirmado\n\n${waCard(saved, await loadContext(l.fam.id), await memberName(saved.member_id))}`, cardButtons(saved))
+    return sendCard(l, phone, await confirmTx(tx), '✅ Confirmado\n\n')
   }
   if (action === 'ed') {
     await db.from('family_members').update({ wa_edit_tx: tx.id, wa_edit_at: new Date().toISOString() }).eq('id', l.member.id)
@@ -303,7 +318,7 @@ async function handleAction(l: Linked, phone: string, id: string) {
   if (action === 'sc') {
     const r = await setCategory(tx, Number(arg))
     if (!r) return sendText(phone, 'Esa categoría ya no existe.')
-    return sendButtons(phone, waCard(r.tx, await loadContext(l.fam.id), await memberName(r.tx.member_id)), cardButtons(r.tx))
+    return sendCard(l, phone, r.tx)
   }
 }
 

@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { parseCOP, todayISO } from '@/lib/format'
 import { priceFor, type PaidPlanId, type Period } from '@/lib/plans'
 import { checkoutUrl, paymentsEnabled } from '@/lib/wompi'
+import { broadcastBudgetAlert, budgetNotice } from '@/lib/ledger'
+import type { Transaction } from '@/lib/types'
 import { recordConsent } from '@/lib/consent'
 import { familyByReferralCode, founderPriceApplies } from '@/lib/growth'
 import { safeNext } from '@/lib/safe-next'
@@ -188,7 +190,7 @@ export async function addTransaction(_: FormState, fd: FormData): Promise<FormSt
   const kind = str(fd, 'kind')
   const value = amount(fd, 'amount')
   if (value <= 0) return { error: 'Escribe un monto válido.' }
-  const { error } = await supabase.from('transactions').insert({
+  const { data: tx, error } = await supabase.from('transactions').insert({
     family_id: family.id,
     kind,
     status: 'confirmed',
@@ -203,9 +205,14 @@ export async function addTransaction(_: FormState, fd: FormData): Promise<FormSt
     payment_method: nullable(str(fd, 'payment_method')),
     source: 'web',
   })
+    .select()
+    .single()
   if (error) return { error: error.message }
   revalidatePath('/', 'layout')
-  return { ok: 'Movimiento registrado.' }
+  // Cuánto queda del presupuesto y, si cruzó un tope, alerta (también al grupo de Telegram)
+  const notice = await budgetNotice(family, tx as Transaction)
+  if (notice.alert) await broadcastBudgetAlert(family, notice.alert)
+  return { ok: ['Movimiento registrado.', notice.line, notice.alert?.replaceAll('*', '')].filter(Boolean).join(' ') }
 }
 
 export async function updateTransaction(fd: FormData) {
@@ -215,8 +222,12 @@ export async function updateTransaction(fd: FormData) {
     if (fd.has(k)) patch[k] = nullable(str(fd, k))
   }
   if (fd.has('amount')) patch.amount = amount(fd, 'amount')
-  await supabase.from('transactions').update(patch).eq('id', str(fd, 'id')).eq('family_id', family.id)
+  const { data: tx } = await supabase.from('transactions').update(patch).eq('id', str(fd, 'id')).eq('family_id', family.id).select().maybeSingle()
   revalidatePath('/', 'layout')
+  if (tx) {
+    const notice = await budgetNotice(family, tx as Transaction)
+    if (notice.alert) await broadcastBudgetAlert(family, notice.alert)
+  }
 }
 
 export async function deleteTransaction(fd: FormData) {
@@ -437,4 +448,99 @@ export async function updatePassword(_: FormState, fd: FormData): Promise<FormSt
   const { error } = await supabase.auth.updateUser({ password })
   if (error) return { error: 'No se pudo cambiar la contraseña. Pide un enlace nuevo.' }
   redirect('/resumen')
+}
+
+// ---------------------------------------------------------------------
+// Alertas e importación del presupuesto
+// ---------------------------------------------------------------------
+
+export async function saveAlertThreshold(fd: FormData) {
+  const { supabase, family } = await requireAdmin()
+  const value = Math.round(Number(str(fd, 'threshold')))
+  if (!(value >= 50 && value <= 95)) return
+  await supabase.from('families').update({ alert_threshold: value }).eq('id', family.id)
+  revalidatePath('/', 'layout')
+}
+
+export type ImportState =
+  | undefined
+  | { error: string }
+  | { ok: string }
+  | {
+      items: (import('@/lib/budget-import').BudgetItem & { target: string })[]
+      existing: { id: string; name: string; kind: string; icon: string }[]
+      file: string
+    }
+
+/** Paso 1: lee el Excel y propone categorías y montos (no guarda nada). */
+export async function previewBudgetImport(_: ImportState, fd: FormData): Promise<ImportState> {
+  const { supabase, family } = await requireAdmin()
+  const file = fd.get('file')
+  if (!(file instanceof File) || !file.size) return { error: 'Elige un archivo .xlsx o .csv.' }
+  const { MAX_FILE_BYTES, interpretBudgetSheet, sheetToText } = await import('@/lib/budget-import')
+  if (file.size > MAX_FILE_BYTES) return { error: 'El archivo es muy grande (máx. 2 MB).' }
+  let text: string
+  try {
+    text = await sheetToText(Buffer.from(await file.arrayBuffer()), file.name)
+  } catch (e) {
+    return { error: e instanceof Error && e.message.startsWith('Formato') ? e.message : 'No pude abrir el archivo. Guárdalo como .xlsx o .csv e inténtalo de nuevo.' }
+  }
+  if (!text.trim()) return { error: 'El archivo está vacío.' }
+  const { data: cats } = await supabase.from('categories').select('*').eq('family_id', family.id).order('name')
+  const existing = (cats ?? []) as import('@/lib/types').Category[]
+  let result: Awaited<ReturnType<typeof interpretBudgetSheet>>
+  try {
+    result = await interpretBudgetSheet(text, existing)
+  } catch (e) {
+    console.error('Error leyendo presupuesto', e)
+    return { error: 'No pude leer el presupuesto en este momento. Intenta de nuevo.' }
+  }
+  if (!result?.understood || !result.items.length) return { error: 'No encontré categorías con montos en ese archivo.' }
+  const byName = new Map(existing.map((c) => [c.name.toLowerCase(), c]))
+  return {
+    file: file.name,
+    existing: existing.map((c) => ({ id: c.id, name: c.name, kind: c.kind, icon: c.icon })),
+    items: result.items.map((it) => {
+      const match = (it.existing_category && byName.get(it.existing_category.toLowerCase())) || byName.get(it.name.toLowerCase())
+      return { ...it, monthly_amount: Math.max(0, Math.round(it.monthly_amount)), target: match ? match.id : 'new' }
+    }),
+  }
+}
+
+/** Paso 2: aplica lo que la persona revisó: actualiza presupuestos o crea categorías nuevas. */
+export async function applyBudgetImport(_: ImportState, fd: FormData): Promise<ImportState> {
+  const { supabase, family } = await requireAdmin()
+  let rows: { include: boolean; name: string; kind: string; icon: string; amount: number; target: string }[]
+  try {
+    rows = JSON.parse(str(fd, 'rows'))
+  } catch {
+    return { error: 'No se pudo leer la selección.' }
+  }
+  const { data: cats } = await supabase.from('categories').select('id, name').eq('family_id', family.id)
+  const ids = new Set((cats ?? []).map((c) => c.id))
+  let updated = 0
+  let created = 0
+  for (const r of rows.filter((r) => r.include).slice(0, 40)) {
+    const amountValue = Math.max(0, Math.round(Number(r.amount) || 0))
+    if (r.target !== 'new' && ids.has(r.target)) {
+      const { error } = await supabase.from('categories').update({ monthly_budget: amountValue }).eq('id', r.target).eq('family_id', family.id)
+      if (!error) updated++
+      continue
+    }
+    const name = String(r.name ?? '').trim().slice(0, 40)
+    if (!name) continue
+    const { error } = await supabase.from('categories').upsert(
+      {
+        family_id: family.id,
+        name,
+        kind: r.kind === 'income' ? 'income' : 'expense',
+        icon: String(r.icon || '•').slice(0, 4),
+        monthly_budget: amountValue,
+      },
+      { onConflict: 'family_id,name' },
+    )
+    if (!error) created++
+  }
+  revalidatePath('/', 'layout')
+  return { ok: `Listo: se actualizaron ${updated} categoría(s) y se crearon ${created} nueva(s).` }
 }

@@ -36,24 +36,83 @@ export function findByName<T extends { name: string }>(list: T[], name: string |
   return list.find((x) => norm(x.name) === n) ?? list.find((x) => norm(x.name).includes(n) || n.includes(norm(x.name)))
 }
 
-export async function budgetWarning(familyId: string, categoryId: string | null): Promise<string | null> {
-  if (!categoryId) return null
-  const s = await getMonthSummary(db, familyId)
-  const line = s.byCategory.find((c) => c.category.id === categoryId)
-  if (!line || line.budget <= 0) return null
-  const pct = line.spent / line.budget
-  if (pct >= 1) return `🚨 ${line.category.name}: ya se pasaron del presupuesto (${money(line.spent)} de ${money(line.budget)}).`
-  if (pct >= 0.8) return `⚠️ ${line.category.name}: van en ${Math.round(pct * 100)}% del presupuesto del mes.`
-  if (line.projected > line.budget)
-    return `📈 ${line.category.name}: a este ritmo cerrarían el mes en ${money(line.projected)} (presupuesto ${money(line.budget)}).`
-  return null
+export interface BudgetNotice {
+  /** Cuánto queda en la categoría del movimiento (se muestra en la tarjeta) */
+  line: string | null
+  /** Alerta nueva por llegar a un tope (solo la primera vez por nivel en el mes) */
+  alert: string | null
+}
+
+const daysLeftInMonth = () => {
+  const [y, m, d] = todayISO().split('-').map(Number)
+  return new Date(Date.UTC(y, m, 0)).getUTCDate() - d + 1
+}
+
+/**
+ * Presupuesto de la categoría de un movimiento: cuánto queda y, si acaba de cruzar el umbral
+ * de la familia (80 % por defecto) o el 100 %, la alerta (que queda registrada para no repetirse).
+ */
+export async function budgetNotice(fam: Family, tx: Transaction): Promise<BudgetNotice> {
+  const none = { line: null, alert: null }
+  if (tx.kind !== 'expense' || !tx.category_id) return none
+  const month = todayISO().slice(0, 8) + '01'
+  if (tx.occurred_on < month) return none // movimientos de meses anteriores no afectan el presupuesto de este mes
+  const s = await getMonthSummary(db, fam.id)
+  const c = s.byCategory.find((x) => x.category.id === tx.category_id)
+  if (!c || c.budget <= 0) return none
+  const name = `${c.category.icon} ${c.category.name}`
+
+  if (tx.status === 'pending') {
+    const after = c.remaining - Number(tx.amount)
+    return {
+      line: after >= 0 ? `${name}: al confirmarlo quedarían ${money(after)} de ${money(c.budget)}.` : `${name}: al confirmarlo se pasarían por ${money(-after)}.`,
+      alert: null,
+    }
+  }
+
+  const pct = (c.spent / c.budget) * 100
+  const line =
+    c.remaining >= 0
+      ? `${name}: quedan ${money(c.remaining)} de ${money(c.budget)} este mes.${c.projected > c.budget && pct < (fam.alert_threshold ?? 80) ? ` A este ritmo cerrarían en ${money(c.projected)}.` : ''}`
+      : `${name}: se pasaron por ${money(-c.remaining)} (presupuesto ${money(c.budget)}).`
+
+  const threshold = fam.alert_threshold ?? 80
+  const crossed = [threshold, 100].filter((l) => pct >= l)
+  if (!crossed.length) return { line, alert: null }
+  const { data: inserted } = await db
+    .from('budget_alerts')
+    .upsert(
+      crossed.map((level) => ({ family_id: fam.id, category_id: c.category.id, month, level })),
+      { onConflict: 'family_id,category_id,month,level', ignoreDuplicates: true },
+    )
+    .select('level')
+  const fresh = (inserted ?? []).map((r) => r.level as number)
+  if (!fresh.length) return { line, alert: null }
+  const top = Math.max(...fresh)
+  const alert =
+    top >= 100
+      ? `🚨 *Alerta de presupuesto:* llegaron al tope de ${name} (${money(c.budget)}).${c.remaining < 0 ? ` Van ${money(-c.remaining)} por encima.` : ''} Lo que gasten de aquí en adelante en esta categoría queda por fuera de lo planeado.`
+      : `⚠️ *Alerta de presupuesto:* ya usaron el ${Math.round(pct)} % de ${name}. Quedan ${money(c.remaining)} para los ${daysLeftInMonth()} días que faltan del mes.`
+  return { line, alert }
+}
+
+/** Las alertas usan *negrita* (WhatsApp); para Telegram se pasan a HTML. */
+export const alertHtml = (text: string) => text.replace(/\*([^*]+)\*/g, '<b>$1</b>')
+
+/** Avisa una alerta en el grupo de Telegram de la familia (cuando el movimiento llegó por otro canal). */
+export async function broadcastBudgetAlert(fam: Family, alert: string) {
+  if (!fam.telegram_chat_id) return
+  const { bot, ensureBotReady } = await import('./bot')
+  await ensureBotReady()
+  const html = alertHtml(alert)
+  await bot.api.sendMessage(fam.telegram_chat_id, html, { parse_mode: 'HTML' }).catch((e) => console.error('Alerta de presupuesto', e))
 }
 
 export type RecordResult =
   | { status: 'blocked'; text: string }
   | { status: 'error'; text: string }
   | { status: 'not_financial' }
-  | { status: 'ok'; tx: Transaction; ex: Extraction; ctx: LedgerContext; warning: string | null }
+  | { status: 'ok'; tx: Transaction; ex: Extraction; ctx: LedgerContext; notice: BudgetNotice }
 
 /** Lee el contenido con IA y registra el movimiento (o explica por qué no). */
 export async function recordMovement(opts: {
@@ -139,8 +198,8 @@ export async function recordMovement(opts: {
     console.error('Error guardando', error)
     return { status: 'error', text: '😕 No pude guardar el movimiento.' }
   }
-  const warning = tx.status === 'confirmed' && tx.kind === 'expense' ? await budgetWarning(fam.id, tx.category_id) : null
-  return { status: 'ok', tx: tx as Transaction, ex, ctx, warning }
+  const notice = await budgetNotice(fam, tx as Transaction)
+  return { status: 'ok', tx: tx as Transaction, ex, ctx, notice }
 }
 
 /** Movimiento de una familia (verifica que le pertenezca). */
