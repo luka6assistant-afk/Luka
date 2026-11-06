@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { hasCronSecret } from '@/lib/secure'
+import { checkConnection, whatsappEnabled } from '@/lib/whatsapp/api'
 
 /**
  * Diagnóstico de la configuración: dice qué llaves faltan o son rechazadas, sin mostrarlas.
@@ -60,6 +61,9 @@ export async function GET(request: Request) {
     deepgram: env('DEEPGRAM_API_KEY')
       ? await check(() => fetch('https://api.deepgram.com/v1/projects', { headers: { Authorization: `Token ${env('DEEPGRAM_API_KEY')}` } }))
       : 'vacía (notas de voz apagadas)',
+    whatsapp: whatsappEnabled() ? await checkConnection() : 'sin configurar',
+    whatsapp_numero: env('NEXT_PUBLIC_WHATSAPP_NUMBER') || 'vacío',
+    whatsapp_plantilla_resumen: env('WHATSAPP_TEMPLATE_RESUMEN') || 'vacía (el resumen del día 1 no se envía por WhatsApp)',
     app_url: appUrl.startsWith('https://') && !appUrl.endsWith('/') ? appUrl : `revisar: "${appUrl}"`,
     telegram_webhook_secret: env('TELEGRAM_WEBHOOK_SECRET') ? 'OK' : 'vacía',
     telegram_bot_username: env('TELEGRAM_BOT_USERNAME') || 'vacía',

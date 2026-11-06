@@ -29,6 +29,9 @@ export interface Member {
   display_name: string
   role: 'admin' | 'member'
   privacy_notice_at: string | null
+  whatsapp_phone?: string | null
+  wa_edit_tx?: string | null
+  wa_edit_at?: string | null
 }
 
 export interface Category {
@@ -77,7 +80,7 @@ export interface Transaction {
   savings_goal_id: string | null
   member_id: string | null
   payment_method: string | null
-  source: 'telegram_photo' | 'telegram_text' | 'telegram_audio' | 'web'
+  source: 'telegram_photo' | 'telegram_text' | 'telegram_audio' | 'whatsapp_photo' | 'whatsapp_text' | 'whatsapp_audio' | 'web'
   receipt_path: string | null
   transcript: string | null
   edit_prompt_message_id: number | null

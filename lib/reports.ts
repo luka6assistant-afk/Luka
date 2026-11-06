@@ -53,6 +53,9 @@ export function transactionsCsv(rows: TxRow[]): Buffer {
   const header = ['Fecha', 'Tipo', 'Monto', 'Categoría', 'Comercio', 'Descripción', 'Quién', 'Medio de pago', 'Estado', 'Origen']
   const SOURCE: Record<string, string> = {
     telegram_photo: 'Foto / PDF',
+    whatsapp_photo: 'Foto / PDF (WhatsApp)',
+    whatsapp_text: 'Mensaje (WhatsApp)',
+    whatsapp_audio: 'Nota de voz (WhatsApp)',
     telegram_text: 'Mensaje',
     telegram_audio: 'Nota de voz',
     web: 'Panel web',

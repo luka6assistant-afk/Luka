@@ -26,8 +26,8 @@ export default function TerminosPage() {
 
       <h2>1. El servicio</h2>
       <p>
-        {L.product} ayuda a una familia a registrar y organizar su dinero. Recibe recibos, facturas, comprobantes y mensajes en un
-        chat de Telegram y los lee con inteligencia artificial. Además ofrece un panel web con movimientos, presupuesto,
+        {L.product} ayuda a una familia a registrar y organizar su dinero. Recibe recibos, facturas, comprobantes y mensajes por
+        Telegram o WhatsApp y los lee con inteligencia artificial. Además ofrece un panel web con movimientos, presupuesto,
         proyecciones y metas de ahorro, y envía al chat un resumen mensual.
       </p>
 

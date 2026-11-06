@@ -10,6 +10,7 @@ const PROVIDERS = [
   ['Supabase', 'Base de datos, inicio de sesión y almacenamiento de las fotos de recibos.', 'Todos los datos de la cuenta y de la familia.', 'Brasil (São Paulo)'],
   ['Vercel', 'Aloja la aplicación y el bot.', 'Los datos pasan por sus servidores al usar el servicio; registros técnicos.', 'Brasil y Estados Unidos'],
   ['Telegram', 'Mensajería del chat familiar y del bot.', 'Los mensajes del chat y tu usuario de Telegram.', 'Según Telegram'],
+  ['Meta (WhatsApp)', 'Mensajería con Luka por WhatsApp.', 'Tu número de WhatsApp, tu nombre de perfil y los mensajes, fotos y notas de voz que le envías a Luka.', 'Estados Unidos y otros países'],
   ['Wompi (Bancolombia)', 'Procesa los pagos de los planes.', 'Correo, valor y referencia del pago. Los datos de la tarjeta los recibe solo Wompi.', 'Colombia'],
 ] as const
 
@@ -41,7 +42,7 @@ export default function PrivacidadPage() {
       <ul>
         <li>
           <b>De identificación y contacto:</b> nombre, correo electrónico, y nombre e identificador de usuario de Telegram de
-          quienes escriben en el chat vinculado.
+          quienes escriben en el chat vinculado, y número de WhatsApp y nombre de perfil de quienes le escriben a Luka por WhatsApp.
         </li>
         <li>
           <b>Financieros de la familia:</b> montos, fechas, comercios, descripciones, categorías, medios de pago, presupuestos y

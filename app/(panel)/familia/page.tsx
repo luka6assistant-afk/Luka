@@ -12,6 +12,11 @@ export default async function FamiliaPage() {
   const members = (data ?? []) as Member[]
   const botUser = process.env.TELEGRAM_BOT_USERNAME
   const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/unirse/${family.link_code}`
+  const waNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
+  // El mensaje lleva el código de la familia y el de esta persona, para unir el número a su propio registro
+  const waLink = waNumber
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(`Hola Luka 👋 Quiero conectar mi WhatsApp. Código: ${family.link_code}·${member.id.slice(0, 8)}`)}`
+    : null
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -108,7 +113,7 @@ export default async function FamiliaPage() {
                 {m.display_name}
                 {m.id === member.id && <span className="text-slate-500"> (tú)</span>}
                 <span className="ml-2 text-xs text-slate-500">
-                  {m.user_id ? '🌐 web' : ''} {m.telegram_user_id ? '✈️ Telegram' : ''}
+                  {m.user_id ? '🌐 web' : ''} {m.telegram_user_id ? '✈️ Telegram' : ''} {m.whatsapp_phone ? '💬 WhatsApp' : ''}
                 </span>
               </span>
               <span className="flex items-center gap-2 text-xs text-slate-500">
@@ -139,9 +144,28 @@ export default async function FamiliaPage() {
         </ul>
         <p className="mt-3 text-xs text-slate-500">
           Administrador: gestiona la familia, categorías, presupuestos y metas. Miembro: registra movimientos y aportes, y consulta
-          reportes. Quien escribe en el grupo de Telegram queda registrado como miembro.
+          reportes. Quien escribe en el grupo de Telegram o conecta su WhatsApp con el código queda registrado como miembro.
         </p>
       </Card>
+
+      {waLink && (
+        <Card title="💬 WhatsApp">
+          {member.whatsapp_phone ? (
+            <p className="text-sm text-brand-700">🟢 Tu WhatsApp está conectado. Envíale a Luka fotos de recibos, PDF, notas de voz o escribe el gasto.</p>
+          ) : (
+            <div className="space-y-3 text-sm">
+              <p className="text-slate-700">
+                Habla con Luka por WhatsApp, cada quien desde su celular. Toca el botón, se abre el chat con el mensaje listo y solo tienes
+                que enviarlo.
+              </p>
+              <a href={waLink} target="_blank" rel="noreferrer" className="btn w-full py-3 text-base">
+                💬 Conectar WhatsApp
+              </a>
+              <p className="text-xs text-slate-600">Cada miembro de la familia conecta su propio WhatsApp desde su cuenta.</p>
+            </div>
+          )}
+        </Card>
+      )}
 
       {!member.telegram_user_id && (
         <Card title="✈️ Conectar mi Telegram (Soy yo)">

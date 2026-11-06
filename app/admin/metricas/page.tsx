@@ -18,6 +18,9 @@ interface Metrics {
 
 const SOURCE: Record<string, string> = {
   telegram_photo: '📸 Foto / PDF',
+  whatsapp_photo: '📸 Foto / PDF (WhatsApp)',
+  whatsapp_text: '💬 Texto (WhatsApp)',
+  whatsapp_audio: '🎙 Nota de voz (WhatsApp)',
   telegram_text: '💬 Texto',
   telegram_audio: '🎙 Nota de voz',
   web: '🌐 Web',

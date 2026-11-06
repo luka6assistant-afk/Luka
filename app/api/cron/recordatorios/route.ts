@@ -19,6 +19,9 @@ export async function GET(request: Request) {
   }
 
   const db = createAdminClient()
+  // Registros temporales de WhatsApp: mensajes ya atendidos (7 días) y enlaces de acceso vencidos
+  await db.from('wa_processed').delete().lt('at', new Date(Date.now() - 7 * 86_400_000).toISOString())
+  await db.from('wa_login_tokens').delete().lt('expires_at', new Date().toISOString())
   const { data } = await db.from('families').select('*').not('telegram_chat_id', 'is', null)
   const app = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const twoDaysAgo = Date.now() - 2 * 86_400_000

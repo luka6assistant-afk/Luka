@@ -1,5 +1,6 @@
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { safeNext } from '@/lib/safe-next'
 
@@ -19,7 +20,8 @@ export async function GET(request: Request) {
   if (tokenHash && type && TYPES.includes(type)) {
     const supabase = await createClient()
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
-    if (!error) return NextResponse.redirect(new URL(next, url.origin))
+    // redirect() conserva las cookies de sesión que acaba de escribir Supabase
+    if (!error) redirect(next)
   }
   return NextResponse.redirect(new URL('/login?aviso=enlace', url.origin))
 }

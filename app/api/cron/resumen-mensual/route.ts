@@ -1,5 +1,7 @@
 import { hasCronSecret } from '@/lib/secure'
 import { ensureBotReady, sendMonthlyReport } from '@/lib/bot'
+import { sendWhatsAppMonthlyReport } from '@/lib/whatsapp/handler'
+import { whatsappEnabled } from '@/lib/whatsapp/api'
 import { createAdminClient } from '@/lib/supabase/server'
 import { monthStart } from '@/lib/format'
 import type { Family } from '@/lib/types'
@@ -21,7 +23,6 @@ export async function GET(request: Request) {
   const { data } = await db
     .from('families')
     .select('*')
-    .not('telegram_chat_id', 'is', null)
     .or(`last_report_month.is.null,last_report_month.lt.${month}`)
 
   await ensureBotReady()
@@ -29,8 +30,10 @@ export async function GET(request: Request) {
   let empty = 0
   for (const fam of (data ?? []) as Family[]) {
     try {
-      const ok = await sendMonthlyReport(fam.telegram_chat_id!, fam, month)
-      if (ok) sent++
+      // Telegram: al grupo de la familia. WhatsApp: a cada miembro conectado (con la plantilla aprobada)
+      const telegram = fam.telegram_chat_id ? await sendMonthlyReport(fam.telegram_chat_id, fam, month) : false
+      const whatsapp = whatsappEnabled() ? await sendWhatsAppMonthlyReport(fam, month) : 0
+      if (telegram || whatsapp) sent++
       else empty++
       await db.from('families').update({ last_report_month: month }).eq('id', fam.id)
     } catch (err) {
