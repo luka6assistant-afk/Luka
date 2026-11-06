@@ -28,7 +28,7 @@ export default async function ResultadoPage(props: PageProps<'/plan/resultado'>)
           <div className="text-5xl">{view.icon}</div>
           <h1 className="mt-3 text-xl font-semibold">{view.title}</h1>
           <p className="mt-2 text-sm text-slate-600">{view.text}</p>
-          {tx && <p className="mt-3 font-mono text-xs text-slate-400">Ref. {tx.reference}</p>}
+          {tx && <p className="mt-3 font-mono text-xs text-slate-500">Ref. {tx.reference}</p>}
           <Link href="/plan" className="btn mt-6">
             Volver a mi plan
           </Link>

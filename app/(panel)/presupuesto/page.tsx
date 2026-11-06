@@ -42,7 +42,7 @@ export default async function PresupuestoPage() {
                   <input
                     name={`budget:${c.id}`}
                     defaultValue={Number(c.monthly_budget) ? Number(c.monthly_budget).toLocaleString('es-CO') : ''}
-                    placeholder="0"
+                    aria-label={`Presupuesto mensual de ${c.name}`} placeholder="0"
                     inputMode="decimal"
                     readOnly={!isAdmin}
                     className="input text-right tabular-nums read-only:bg-slate-50"
@@ -101,14 +101,14 @@ export default async function PresupuestoPage() {
         <Card title="Nueva categoría">
           <form action={addCategory} className="space-y-3">
             <div className="grid grid-cols-[4rem_1fr] gap-2">
-              <input name="icon" placeholder="🧸" className="input text-center" maxLength={4} />
-              <input name="name" placeholder="Nombre" required className="input" />
+              <input name="icon" aria-label="Ícono (emoji)" placeholder="🧸" className="input text-center" maxLength={4} />
+              <input name="name" aria-label="Nombre" placeholder="Nombre" required className="input" />
             </div>
-            <select name="kind" className="input">
+            <select name="kind" aria-label="Tipo de categoría" className="input">
               <option value="expense">Gasto</option>
               <option value="income">Ingreso</option>
             </select>
-            <input name="monthly_budget" placeholder="Presupuesto mensual" inputMode="decimal" className="input" />
+            <input name="monthly_budget" aria-label="Presupuesto mensual" placeholder="Presupuesto mensual" inputMode="decimal" className="input" />
             <SubmitButton className="btn w-full">Agregar</SubmitButton>
           </form>
         </Card>

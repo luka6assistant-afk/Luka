@@ -10,11 +10,11 @@ export default function LoginPage() {
         <NextField />
         <div>
           <label className="label">Correo</label>
-          <input name="email" type="email" required className="input" autoComplete="email" />
+          <input aria-label="Correo" name="email" type="email" required className="input" autoComplete="email" />
         </div>
         <div>
           <label className="label">Contraseña</label>
-          <input name="password" type="password" required className="input" autoComplete="current-password" />
+          <input aria-label="Contraseña" name="password" type="password" required className="input" autoComplete="current-password" />
         </div>
         <SubmitButton className="btn w-full">Entrar</SubmitButton>
       </ActionForm>

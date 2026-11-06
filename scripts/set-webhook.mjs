@@ -32,6 +32,7 @@ console.log(
       { command: 'resumen', description: 'Cómo va el mes y el presupuesto' },
       { command: 'pendientes', description: 'Movimientos por confirmar' },
       { command: 'meta', description: 'Metas de ahorro y cuánto falta' },
+      { command: 'reporte', description: 'Resumen del mes con archivo de movimientos' },
       { command: 'panel', description: 'Abrir el panel aquí en Telegram' },
       { command: 'plan', description: 'Plan, lecturas usadas y pago' },
       { command: 'vincular', description: 'Conectar este chat con la familia' },

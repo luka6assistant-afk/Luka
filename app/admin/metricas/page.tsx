@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
-import { notFound, redirect } from 'next/navigation'
-import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { requireCreator } from '@/lib/creator'
 import { Card, Stat } from '@/components/cards'
 
 interface Metrics {
@@ -26,10 +26,10 @@ const SOURCE: Record<string, string> = {
 /** Métricas de éxito del PRD. Solo para los correos en ADMIN_EMAILS. */
 export default function MetricasPage() {
   return (
-    <main className="mx-auto max-w-5xl p-6">
+    <main id="contenido" className="mx-auto max-w-6xl p-6">
       <h1 className="text-2xl font-bold">Métricas del MVP</h1>
-      <p className="text-sm text-slate-500">Objetivos de los primeros 30 días según el PRD</p>
-      <Suspense fallback={<p className="mt-6 text-sm text-slate-500">Calculando…</p>}>
+      <p className="text-sm text-slate-600">Objetivos de los primeros 30 días según el PRD</p>
+      <Suspense fallback={<p className="mt-6 text-sm text-slate-600">Calculando…</p>}>
         <MetricsView />
       </Suspense>
     </main>
@@ -37,13 +37,7 @@ export default function MetricasPage() {
 }
 
 async function MetricsView() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login?next=/admin/metricas')
-  const admins = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
-  if (!user.email || !admins.includes(user.email.toLowerCase())) notFound()
+  await requireCreator('/admin/metricas')
 
   const { data, error } = await createAdminClient().rpc('product_metrics')
   if (error) return <p className="mt-6 text-sm text-rose-600">Error: {error.message}</p>
@@ -77,10 +71,10 @@ async function MetricsView() {
 
       <Card title="Tiempo para registrar un movimiento (últimos 30 días) · meta < 10 s">
         {m.latency.length === 0 ? (
-          <p className="text-sm text-slate-500">Aún no hay registros desde Telegram.</p>
+          <p className="text-sm text-slate-600">Aún no hay registros desde Telegram.</p>
         ) : (
           <table className="w-full text-sm tabular-nums">
-            <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
+            <thead className="text-left text-xs uppercase tracking-wide text-slate-600">
               <tr>
                 <th className="py-2">Origen</th>
                 <th>Registros</th>
@@ -102,7 +96,7 @@ async function MetricsView() {
             </tbody>
           </table>
         )}
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-slate-600">
           Desde que la persona envía el mensaje hasta que el bot responde con el movimiento registrado. Telegram reporta la hora de
           envío en segundos, así que hay hasta 1 s de imprecisión.
         </p>
@@ -112,7 +106,7 @@ async function MetricsView() {
         <Stat label="Familias pagando" value={String(m.families_paying)} />
         <Stat label="Lecturas con IA este mes" value={m.ai_reads_this_month.toLocaleString('es-CO')} />
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-600">
         Retención semana 4: de las familias creadas hace 28 días o más, el porcentaje que registró algo en los últimos 7 días.
       </p>
     </div>

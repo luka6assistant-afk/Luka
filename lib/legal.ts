@@ -12,10 +12,10 @@ export const LEGAL = {
   email: process.env.NEXT_PUBLIC_LEGAL_EMAIL || '[CORREO DE CONTACTO]',
   phone: process.env.NEXT_PUBLIC_LEGAL_PHONE || '[TELÉFONO]',
   product: 'Luka',
-  effectiveDate: '5 de noviembre de 2026',
+  effectiveDate: '6 de noviembre de 2026',
   versions: {
-    terminos: '2026-11-05',
-    privacidad: '2026-11-05',
+    terminos: '2026-11-06',
+    privacidad: '2026-11-06',
   },
 } as const
 

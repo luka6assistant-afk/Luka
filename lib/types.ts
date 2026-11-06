@@ -11,6 +11,8 @@ export interface Family {
   trial_ends_at: string
   paid_until: string | null
   last_reminder_at: string | null
+  last_report_month?: string | null
+  created_at?: string
 }
 
 export interface Member {

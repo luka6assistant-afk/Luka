@@ -19,7 +19,7 @@ export default async function FamiliaPage() {
           <>
             <p className="text-sm text-slate-600">Comparte este enlace por WhatsApp o Telegram. Quien lo abra crea su cuenta y entra a la familia.</p>
             <div className="mt-3 flex gap-2">
-              <input readOnly value={inviteUrl} className="input font-mono text-xs" />
+              <input readOnly aria-label="Enlace de invitación" value={inviteUrl} className="input font-mono text-xs" />
               <CopyButton value={inviteUrl} />
             </div>
             <a
@@ -65,7 +65,7 @@ export default async function FamiliaPage() {
       <Card title="🏠 Familia" className="lg:col-span-2">
         {isAdmin && (
           <form action={renameFamily} className="mb-6 flex max-w-md gap-2">
-            <input name="name" defaultValue={family.name} className="input" />
+            <input name="name" aria-label="Nombre de la familia" defaultValue={family.name} className="input" />
             <SubmitButton>Guardar</SubmitButton>
           </form>
         )}
@@ -75,7 +75,7 @@ export default async function FamiliaPage() {
             <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
               <span>
                 {m.display_name}
-                {m.id === member.id && <span className="text-slate-400"> (tú)</span>}
+                {m.id === member.id && <span className="text-slate-500"> (tú)</span>}
                 <span className="ml-2 text-xs text-slate-500">
                   {m.user_id ? '🌐 web' : ''} {m.telegram_user_id ? '✈️ Telegram' : ''}
                 </span>
@@ -93,7 +93,7 @@ export default async function FamiliaPage() {
                   <>
                     <form action={setMemberRole}>
                       <input type="hidden" name="id" value={m.id} />
-                      <AutoSubmitSelect name="role" defaultValue={m.role} className="input py-1 text-xs">
+                      <AutoSubmitSelect name="role" aria-label={`Rol de ${m.display_name}`} defaultValue={m.role} className="input py-1 text-xs">
                         <option value="admin">Administrador</option>
                         <option value="member">Miembro</option>
                       </AutoSubmitSelect>

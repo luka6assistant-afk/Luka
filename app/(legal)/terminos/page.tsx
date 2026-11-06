@@ -11,7 +11,7 @@ export default function TerminosPage() {
   return (
     <>
       <h1>Términos y condiciones de uso</h1>
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-600">
         Versión {L.versions.terminos} · Vigente desde el {L.effectiveDate}
       </p>
 
@@ -28,12 +28,12 @@ export default function TerminosPage() {
       <p>
         {L.product} ayuda a una familia a registrar y organizar su dinero. Recibe recibos, facturas, comprobantes y mensajes en un
         chat de Telegram y los lee con inteligencia artificial. Además ofrece un panel web con movimientos, presupuesto,
-        proyecciones, deudas y metas de ahorro.
+        proyecciones y metas de ahorro, y envía al chat un resumen mensual.
       </p>
 
       <h2>2. No es asesoría financiera</h2>
       <p>
-        Los resúmenes, proyecciones, planes de pago de deudas y recomendaciones son <b>estimaciones informativas</b>. Se calculan
+        Los resúmenes, proyecciones y cálculos de ahorro son <b>estimaciones informativas</b>. Se calculan
         con la información que ustedes registran y con supuestos simples, como cuotas fijas y tasas constantes. No son asesoría
         financiera, tributaria, legal ni de inversión, y no reemplazan la información oficial de su banco o entidad. Las
         decisiones financieras son responsabilidad de cada familia.
@@ -69,12 +69,13 @@ export default function TerminosPage() {
         <li>Cada familia nueva tiene una prueba gratis de 14 días, sin pedir medio de pago.</li>
         <li>
           Planes vigentes: {PLANS.familia.name} a {money(PLANS.familia.monthlyPrice)} al mes o {money(PLANS.familia.yearlyPrice)}{' '}
-          al año, y {PLANS.plus.name} a {money(PLANS.plus.monthlyPrice)} al mes o {money(PLANS.plus.yearlyPrice)} al año. Los
-          precios incluyen los impuestos que apliquen.
+          al año, y {PLANS.plus.name} a {money(PLANS.plus.monthlyPrice)} al mes o {money(PLANS.plus.yearlyPrice)} al año. Es el
+          <b>precio final</b>: incluye los impuestos que apliquen y no hay cargos adicionales, de activación ni comisiones por
+          pagar.
         </li>
         <li>
-          El pago es <b>por periodo</b> (un mes o un año) y se hace por Wompi. <b>No se renueva automáticamente</b>. Te avisaremos
-          antes de que venza.
+          El pago es <b>por periodo</b> (un mes o un año) y se hace por Wompi. <b>No se renueva automáticamente</b>, no guardamos tu
+          tarjeta y nunca te cobraremos sin que tú hagas el pago. Te avisaremos antes de que venza.
         </li>
         <li>
           Cada plan incluye un número de lecturas con inteligencia artificial al mes. Si se agotan, puedes seguir registrando
@@ -86,7 +87,7 @@ export default function TerminosPage() {
         <li>Si cambiamos los precios, te avisaremos con al menos 30 días de anticipación. El cambio no afecta periodos ya pagados.</li>
       </ul>
 
-      <h2>7. Derecho de retracto y reversión del pago</h2>
+      <h2>7. Derecho de retracto, reembolsos y reversión del pago</h2>
       <p>
         Como la compra se hace a distancia, tienes derecho de retracto dentro de los <b>5 días hábiles</b> siguientes al pago
         (artículo 47 de la Ley 1480 de 2011, Estatuto del Consumidor). Para ejercerlo escribe a {L.email}. Te devolveremos el
@@ -96,6 +97,13 @@ export default function TerminosPage() {
         También puedes pedir la reversión del pago en los casos del artículo 51 de la Ley 1480 de 2011, presentando la queja ante
         nosotros y ante la entidad emisora del medio de pago dentro de los 5 días hábiles siguientes a la fecha en que conociste
         el problema.
+      </p>
+      <p>
+        Los casos y plazos de devolución están en la{' '}
+        <Link href="/reembolsos" className="text-brand-700 underline">
+          Política de reembolsos
+        </Link>
+        .
       </p>
 
       <h2>8. Disponibilidad</h2>
@@ -112,22 +120,30 @@ export default function TerminosPage() {
         hayas pagado en los últimos 12 meses. Nada de esto limita tus derechos como consumidor.
       </p>
 
-      <h2>10. Cancelación</h2>
+      <h2>10. Cancelación y borrado</h2>
       <p>
-        Puedes dejar de usar el servicio cuando quieras. Para borrar tu cuenta o la información de la familia escribe a {L.email}.
-        Lo hacemos según la{' '}
+        Puedes dejar de usar el servicio cuando quieras. Como no hay cobros automáticos, <b>no hay ninguna suscripción que
+        cancelar</b>: si no vuelves a pagar, el plan simplemente vence. Puedes borrar tu cuenta o la familia completa tú mismo en el
+        panel, en <b>🔒 Mis datos</b>, o escribiendo a {L.email}. Lo hacemos según la{' '}
         <Link href="/privacidad" className="text-brand-700 underline">
           Política de tratamiento de datos
         </Link>
         .
       </p>
 
-      <h2>11. Cambios a estos términos</h2>
+      <h2>11. Comunicaciones</h2>
+      <p>
+        Solo te enviamos mensajes del servicio: los registros y alertas en el chat, el resumen mensual, avisos de vencimiento y
+        cambios en estos documentos. No enviamos publicidad. Si en el futuro enviamos correos promocionales, será solo con tu
+        autorización previa y cada correo tendrá un enlace para darte de baja con un clic.
+      </p>
+
+      <h2>12. Cambios a estos términos</h2>
       <p>
         Si hacemos cambios importantes, te pediremos aceptar la nueva versión antes de seguir usando el servicio.
       </p>
 
-      <h2>12. Ley y contacto</h2>
+      <h2>13. Ley y contacto</h2>
       <p>
         Estos términos se rigen por las leyes de Colombia. Para dudas, quejas o reclamos: {L.email} · {L.phone} · {L.address},{' '}
         {L.city}.

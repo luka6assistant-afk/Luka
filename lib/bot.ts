@@ -1,11 +1,12 @@
 import 'server-only'
-import { Bot, InlineKeyboard, type Context } from 'grammy'
+import { Bot, InlineKeyboard, InputFile, type Context } from 'grammy'
 import type { Message, User } from 'grammy/types'
 import { createAdminClient } from './supabase/server'
 import { extractTransaction, interpretEdit, type EditPatch, type Extraction, type ExtractionInput } from './extract'
 import { transcribe, transcriptionEnabled } from './transcribe'
 import { getMonthSummary, debtPayoff, requiredMonthly } from './finance'
-import { money, monthLabel, todayISO, dateLabel } from './format'
+import { money, monthLabel, monthStart, todayISO, dateLabel } from './format'
+import { monthlyReport } from './reports'
 import { PLANS, getAccess } from './plans'
 import { LEGAL } from './legal'
 import { FEATURES } from './features'
@@ -172,6 +173,7 @@ const HELP = [
   '/pendientes — movimientos por confirmar',
   ...(FEATURES.debts ? ['/deudas — saldos y fecha estimada de pago'] : []),
   '/meta — metas de ahorro y cuánto falta',
+  '/reporte — resumen del mes con el archivo de movimientos (/reporte anterior para el mes pasado)',
   '/panel — abrir el panel aquí mismo en Telegram',
   '/plan — plan, lecturas usadas y pago',
   '/vincular CÓDIGO — conectar este chat con la familia',
@@ -211,7 +213,7 @@ bot.command('privacidad', (ctx) =>
       `Política de tratamiento de datos: ${APP_URL}/privacidad`,
       `Términos y condiciones: ${APP_URL}/terminos`,
       '',
-      `Para conocer, corregir o borrar tus datos, o revocar la autorización, escribe a ${LEGAL.email} indicando tu usuario de Telegram.`,
+      `Puedes descargar o borrar tus datos tú mismo: abre /panel → 🔒 Mis datos. También puedes escribir a ${LEGAL.email} indicando tu usuario de Telegram.`,
     ].join('\n'),
     { parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
   ),
@@ -332,6 +334,25 @@ bot.command('deudas', async (ctx) => {
     return `💳 <b>${escapeHtml(d.name)}</b>: ${money(d.balance)}\n   Cuota ${money(d.monthly_payment)}${d.due_day ? ` · paga el ${d.due_day}` : ''} · ${eta}`
   })
   return ctx.reply([`<b>Deudas — total ${money(total)}</b>`, '', ...lines].join('\n'), { parse_mode: 'HTML' })
+})
+
+/** Envía al chat el resumen de un mes con el CSV de movimientos. Lo usa /reporte y el cron del día 1. */
+export async function sendMonthlyReport(chatId: number, fam: Family, month: string): Promise<boolean> {
+  const r = await monthlyReport(db, fam, month, APP_URL)
+  if (!r) return false
+  await bot.api.sendMessage(chatId, r.text, { parse_mode: 'HTML', link_preview_options: { is_disabled: true } })
+  await bot.api.sendDocument(chatId, new InputFile(r.csv, r.filename), { caption: `🧾 Movimientos de ${r.filename.slice(5, 12)}` })
+  return true
+}
+
+bot.command('reporte', async (ctx) => {
+  const fam = await requireFamily(ctx)
+  if (!fam) return
+  // /reporte → mes actual hasta hoy · /reporte anterior → mes pasado completo
+  const previous = /anterior|pasado/i.test(ctx.match)
+  const month = monthStart(previous ? -1 : 0)
+  const sent = await sendMonthlyReport(ctx.chat.id, fam, month)
+  if (!sent) return ctx.reply(`No hay movimientos en ${monthLabel(month)}.${previous ? '' : ' Para ver el mes pasado escriban /reporte anterior.'}`)
 })
 
 bot.command(['meta', 'metas', 'ahorros'], async (ctx) => {

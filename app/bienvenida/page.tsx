@@ -36,11 +36,11 @@ async function Bienvenida() {
           <h2 className="font-semibold">🏠 Crear familia</h2>
           <div>
             <label className="label">Nombre de la familia</label>
-            <input name="family" placeholder="Familia Pérez" required className="input" />
+            <input aria-label="Nombre de la familia" name="family" placeholder="Familia Pérez" required className="input" />
           </div>
           <div>
             <label className="label">Tu nombre</label>
-            <input name="name" defaultValue={name} required className="input" />
+            <input aria-label="Tu nombre" name="name" defaultValue={name} required className="input" />
           </div>
           <SubmitButton className="btn w-full">Crear</SubmitButton>
         </ActionForm>
@@ -48,11 +48,11 @@ async function Bienvenida() {
           <h2 className="font-semibold">🔑 Unirme con código</h2>
           <div>
             <label className="label">Código de la familia</label>
-            <input name="code" placeholder="A1B2C3" required className="input uppercase" />
+            <input aria-label="Código de la familia" name="code" placeholder="A1B2C3" required className="input uppercase" />
           </div>
           <div>
             <label className="label">Tu nombre</label>
-            <input name="name" defaultValue={name} required className="input" />
+            <input aria-label="Tu nombre" name="name" defaultValue={name} required className="input" />
           </div>
           <SubmitButton className="btn w-full">Unirme</SubmitButton>
         </ActionForm>

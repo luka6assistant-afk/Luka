@@ -72,13 +72,13 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
         </div>
         <NavLinks />
       </header>
-      <main className="mx-auto max-w-6xl p-4 pb-16">
+      <main id="contenido" className="mx-auto max-w-6xl p-4 pb-16">
         <Suspense>
           <PlanBanner />
         </Suspense>
         <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
       </main>
-      <footer className="mx-auto max-w-6xl px-4 pb-8 text-center text-xs text-slate-400">
+      <footer className="mx-auto max-w-6xl px-4 pb-8 text-center text-xs text-slate-600">
         Las proyecciones y planes son estimaciones informativas, no asesoría financiera.
         <LegalLinks />
       </footer>

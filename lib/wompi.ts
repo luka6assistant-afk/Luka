@@ -6,6 +6,8 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY ?? ''
 const isTest = PUBLIC_KEY.startsWith('pub_test_')
+/** Los pagos solo se muestran si Wompi está configurado (llave pública real, no la de ejemplo). */
+export const paymentsEnabled = /^pub_(test|prod)_.{8,}/.test(PUBLIC_KEY)
 export const WOMPI_API = isTest ? 'https://sandbox.wompi.co/v1' : 'https://production.wompi.co/v1'
 
 /** Firma de integridad del Web Checkout: SHA256(referencia + monto_en_centavos + moneda + secreto). */

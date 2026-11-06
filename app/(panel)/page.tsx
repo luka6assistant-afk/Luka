@@ -121,7 +121,7 @@ export default async function ResumenPage() {
                       </span>
                       <span className="tabular-nums text-slate-600">
                         {money(c.spent)}
-                        {c.budget > 0 && <span className="text-slate-400"> / {money(c.budget)}</span>}
+                        {c.budget > 0 && <span className="text-slate-500"> / {money(c.budget)}</span>}
                       </span>
                     </div>
                     <Progress value={c.spent} max={c.budget} projected={c.projected} />

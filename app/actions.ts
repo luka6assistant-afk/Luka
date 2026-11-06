@@ -7,7 +7,7 @@ import { requireAdmin, requireFamily } from '@/lib/session'
 import { createAdminClient } from '@/lib/supabase/server'
 import { parseCOP, todayISO } from '@/lib/format'
 import { priceFor, type PaidPlanId, type Period } from '@/lib/plans'
-import { checkoutUrl } from '@/lib/wompi'
+import { checkoutUrl, paymentsEnabled } from '@/lib/wompi'
 import { recordConsent } from '@/lib/consent'
 import { safeNext } from '@/lib/safe-next'
 
@@ -151,6 +151,7 @@ export async function removeMember(fd: FormData) {
 
 export async function startCheckout(fd: FormData) {
   const { supabase, family, user } = await requireFamily()
+  if (!paymentsEnabled) throw new Error('Los pagos todavía no están habilitados.')
   const plan = (str(fd, 'plan') === 'plus' ? 'plus' : 'familia') as PaidPlanId
   const period = (str(fd, 'period') === 'yearly' ? 'yearly' : 'monthly') as Period
   const amountInCents = priceFor(plan, period) * 100
@@ -331,4 +332,70 @@ export async function quickMovement(fd: FormData) {
     source: 'web',
   })
   revalidatePath('/', 'layout')
+}
+
+// ---------------------------------------------------------------------
+// Datos personales: borrar la cuenta o la familia (Ley 1581, derecho de supresión)
+// ---------------------------------------------------------------------
+
+const isTelegramOnly = (email?: string | null) => !!email?.endsWith('@telegram.invalid')
+
+/** Borra las fotos de recibos de una familia (están en recibos/<family_id>/…). */
+async function removeFamilyFiles(familyId: string) {
+  const storage = createAdminClient().storage.from('recibos')
+  for (let i = 0; i < 50; i++) {
+    const { data } = await storage.list(familyId, { limit: 1000 })
+    if (!data?.length) break
+    await storage.remove(data.map((f) => `${familyId}/${f.name}`))
+  }
+}
+
+/** Borra la familia con todos sus datos y las cuentas solo-Telegram que queden sin familia. */
+async function destroyFamily(familyId: string) {
+  const admin = createAdminClient()
+  const { data: members } = await admin.from('family_members').select('user_id').eq('family_id', familyId)
+  await removeFamilyFiles(familyId)
+  const { error } = await admin.from('families').delete().eq('id', familyId)
+  if (error) throw new Error(`No se pudo borrar la familia: ${error.message}`)
+  for (const uid of new Set((members ?? []).map((m) => m.user_id).filter(Boolean) as string[])) {
+    const { data: u } = await admin.auth.admin.getUserById(uid)
+    if (!isTelegramOnly(u.user?.email)) continue
+    const { count } = await admin.from('family_members').select('id', { count: 'exact', head: true }).eq('user_id', uid)
+    if (!count) await admin.auth.admin.deleteUser(uid)
+  }
+}
+
+export async function deleteFamily(_: FormState, fd: FormData): Promise<FormState> {
+  const { family } = await requireAdmin()
+  if (str(fd, 'confirm').toUpperCase() !== 'BORRAR') return { error: 'Escribe BORRAR para confirmar.' }
+  await destroyFamily(family.id)
+  revalidatePath('/', 'layout')
+  redirect('/bienvenida')
+}
+
+export async function deleteMyAccount(_: FormState, fd: FormData): Promise<FormState> {
+  const { supabase, user } = await requireFamily()
+  if (str(fd, 'confirm').toUpperCase() !== 'BORRAR') return { error: 'Escribe BORRAR para confirmar.' }
+  const admin = createAdminClient()
+  const { data: mine } = await admin.from('family_members').select('id, family_id, role').eq('user_id', user.id)
+
+  for (const m of mine ?? []) {
+    const { data: others } = await admin.from('family_members').select('id, role').eq('family_id', m.family_id).neq('id', m.id)
+    if (!others?.length) {
+      // Era el único miembro: se borra la familia completa
+      await destroyFamily(m.family_id)
+      continue
+    }
+    if (m.role === 'admin' && !others.some((o) => o.role === 'admin'))
+      return {
+        error:
+          'Eres el único administrador de tu familia. Antes de borrar tu cuenta nombra a otro administrador (en Familia) o borra la familia completa.',
+      }
+  }
+  // Los movimientos que registró quedan en la familia, sin su nombre (member_id pasa a null)
+  await admin.from('family_members').delete().eq('user_id', user.id)
+  const { error } = await admin.auth.admin.deleteUser(user.id)
+  if (error) return { error: `No se pudo borrar la cuenta: ${error.message}` }
+  await supabase.auth.signOut().catch(() => {})
+  redirect('/login?cuenta=borrada')
 }

@@ -45,7 +45,7 @@ export default async function AhorrosPage() {
             return (
               <Card key={g.id} title={`🐷 ${g.name}`} action={g.target_date && <span className="text-xs text-slate-500">para {monthLabel(g.target_date)}</span>}>
                 <p className="text-2xl font-semibold tabular-nums">
-                  {money(g.current_amount)} <span className="text-base font-normal text-slate-400">/ {money(g.target_amount)}</span>
+                  {money(g.current_amount)} <span className="text-base font-normal text-slate-500">/ {money(g.target_amount)}</span>
                 </p>
                 <div className="mt-2">
                   <Progress value={Number(g.current_amount)} max={Number(g.target_amount)} />
@@ -59,7 +59,7 @@ export default async function AhorrosPage() {
                 <form action={quickMovement} className="mt-4 flex gap-2">
                   <input type="hidden" name="kind" value="saving" />
                   <input type="hidden" name="target_id" value={g.id} />
-                  <input name="amount" placeholder="Aporte" inputMode="decimal" required className="input" />
+                  <input name="amount" aria-label="Aporte" placeholder="Aporte" inputMode="decimal" required className="input" />
                   <SubmitButton>Aportar</SubmitButton>
                 </form>
                 {isAdmin && (
@@ -67,9 +67,9 @@ export default async function AhorrosPage() {
                   <summary className="cursor-pointer text-sm text-slate-500">Editar</summary>
                   <form action={saveGoal} className="mt-3 grid gap-3 sm:grid-cols-3">
                     <input type="hidden" name="id" value={g.id} />
-                    <input name="name" defaultValue={g.name} required className="input" />
-                    <input name="target_amount" defaultValue={Number(g.target_amount).toLocaleString('es-CO')} inputMode="decimal" className="input" />
-                    <input name="target_date" type="date" defaultValue={g.target_date ?? ''} className="input" />
+                    <input name="name" aria-label="Nombre de la meta" defaultValue={g.name} required className="input" />
+                    <input name="target_amount" aria-label="Monto objetivo" defaultValue={Number(g.target_amount).toLocaleString('es-CO')} inputMode="decimal" className="input" />
+                    <input name="target_date" aria-label="Fecha objetivo" type="date" defaultValue={g.target_date ?? ''} className="input" />
                     <div className="flex justify-between sm:col-span-3">
                       <SubmitButton>Guardar</SubmitButton>
                       <ConfirmButton message="¿Archivar esta meta?" formAction={archiveGoal}>
@@ -90,19 +90,19 @@ export default async function AhorrosPage() {
         <form action={saveGoal} className="grid gap-3 sm:grid-cols-4">
           <div>
             <label className="label">Nombre</label>
-            <input name="name" placeholder="Fondo de emergencia" required className="input" />
+            <input aria-label="Nombre" name="name" placeholder="Fondo de emergencia" required className="input" />
           </div>
           <div>
             <label className="label">Meta (COP)</label>
-            <input name="target_amount" inputMode="decimal" required className="input" />
+            <input aria-label="Meta (COP)" name="target_amount" inputMode="decimal" required className="input" />
           </div>
           <div>
             <label className="label">Ya tienen ahorrado</label>
-            <input name="current_amount" inputMode="decimal" placeholder="0" className="input" />
+            <input aria-label="Ya tienen ahorrado" name="current_amount" inputMode="decimal" placeholder="0" className="input" />
           </div>
           <div>
             <label className="label">Fecha objetivo</label>
-            <input name="target_date" type="date" className="input" />
+            <input aria-label="Fecha objetivo" name="target_date" type="date" className="input" />
           </div>
           <div className="sm:col-span-4">
             <SubmitButton>Crear meta</SubmitButton>

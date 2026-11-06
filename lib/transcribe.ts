@@ -7,7 +7,10 @@ import 'server-only'
 export async function transcribe(audio: Buffer, mimeType = 'audio/ogg'): Promise<string> {
   const key = process.env.DEEPGRAM_API_KEY
   if (!key) throw new Error('Falta DEEPGRAM_API_KEY')
-  const params = new URLSearchParams({ model: 'nova-3', language: 'es-419', smart_format: 'true', punctuate: 'true' })
+  const params = new URLSearchParams({ model: 'nova-3', language: 'es-419', smart_format: 'true', punctuate: 'true',
+    // Excluye los audios del programa de mejora de modelos de Deepgram (no se usan para entrenar)
+    mip_opt_out: 'true',
+  })
   const res = await fetch(`https://api.deepgram.com/v1/listen?${params}`, {
     method: 'POST',
     headers: { Authorization: `Token ${key}`, 'Content-Type': mimeType },

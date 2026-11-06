@@ -12,6 +12,7 @@ const LINKS = [
   { href: '/ahorros', label: '🐷 Metas' },
   { href: '/familia', label: '👨‍👩‍👧 Familia' },
   { href: '/plan', label: '💎 Plan' },
+  { href: '/mis-datos', label: '🔒 Mis datos' },
 ]
 
 export function NavLinks() {

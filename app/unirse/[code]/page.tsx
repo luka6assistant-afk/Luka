@@ -63,7 +63,7 @@ async function Invitation({ params }: { params: Promise<{ code: string }> }) {
         <input type="hidden" name="code" value={code} />
         <div>
           <label className="label">Tu nombre</label>
-          <input name="name" defaultValue={(user.user_metadata?.full_name as string | undefined) ?? ''} required className="input" />
+          <input aria-label="Tu nombre" name="name" defaultValue={(user.user_metadata?.full_name as string | undefined) ?? ''} required className="input" />
         </div>
         <SubmitButton className="btn w-full">Unirme a la familia</SubmitButton>
       </ActionForm>

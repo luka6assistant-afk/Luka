@@ -3,6 +3,7 @@ import { requireFamily } from '@/lib/session'
 import { PLANS, getAccess, type PaidPlanId } from '@/lib/plans'
 import { money } from '@/lib/format'
 import { startCheckout } from '@/app/actions'
+import { paymentsEnabled } from '@/lib/wompi'
 import { Card, Progress } from '@/components/cards'
 import { SubmitButton } from '@/components/ui'
 
@@ -57,11 +58,11 @@ export default async function PlanPage() {
           return (
             <section
               key={id}
-              className={`rounded-2xl border bg-white p-6 shadow-sm ${id === 'plus' ? 'border-brand-500 ring-1 ring-brand-500' : 'border-slate-200'}`}
+              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{p.name}</h2>
-                {id === 'plus' && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">Recomendado</span>}
+                {id === 'plus' && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">Para familias grandes</span>}
               </div>
               <p className="mt-2">
                 <span className="text-3xl font-bold tabular-nums">{money(p.monthlyPrice)}</span>
@@ -73,27 +74,35 @@ export default async function PlanPage() {
                   <li key={f}>✓ {f}</li>
                 ))}
               </ul>
-              <form action={startCheckout} className="mt-6 grid grid-cols-2 gap-2">
-                <input type="hidden" name="plan" value={id} />
-                <SubmitButton className={id === 'plus' ? 'btn' : 'btn-ghost'}>
-                  1 mes
-                </SubmitButton>
-                <button type="submit" name="period" value="yearly" className={id === 'plus' ? 'btn' : 'btn-ghost'}>
-                  1 año
-                </button>
-              </form>
+              {paymentsEnabled ? (
+                <form action={startCheckout} className="mt-6 grid grid-cols-2 gap-2">
+                  <input type="hidden" name="plan" value={id} />
+                  <SubmitButton className="btn">Pagar 1 mes · {money(p.monthlyPrice)}</SubmitButton>
+                  <button type="submit" name="period" value="yearly" className="btn">
+                    Pagar 1 año · {money(p.yearlyPrice)}
+                  </button>
+                </form>
+              ) : (
+                <p className="mt-6 rounded-lg bg-slate-100 p-3 text-sm text-slate-700">
+                  Los pagos todavía no están habilitados. Mientras tanto puedes usar la prueba gratis.
+                </p>
+              )}
               {current && <p className="mt-2 text-xs text-slate-500">Es tu plan actual: pagar suma el tiempo al vencimiento.</p>}
             </section>
           )
         })}
       </div>
       <p className="text-center text-xs text-slate-500">
-        Pagos seguros con Wompi (Bancolombia): tarjeta, PSE, Nequi, botón Bancolombia. El pago es por periodo, no se renueva solo: te
-        avisaremos por Telegram antes de que venza. Al pagar aceptas los{' '}
+        Pagos con Wompi (Bancolombia). Precio final, sin cargos adicionales. El pago es por periodo y no se renueva solo: no guardamos
+        tu tarjeta y te avisaremos por Telegram antes de que venza. Al pagar aceptas los{' '}
         <Link href="/terminos" className="underline">
           Términos y condiciones
         </Link>
-        . Tienes 5 días hábiles de derecho de retracto.
+        . Tienes 5 días hábiles de derecho de retracto (ver{' '}
+        <Link href="/reembolsos" className="underline">
+          Política de reembolsos
+        </Link>
+        ).
       </p>
 
       {!!payments?.length && (

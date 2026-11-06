@@ -16,31 +16,31 @@ function DebtFields({ d }: { d?: Debt }) {
       {d && <input type="hidden" name="id" value={d.id} />}
       <div>
         <label className="label">Nombre</label>
-        <input name="name" defaultValue={d?.name} placeholder="Tarjeta Visa" required className="input" />
+        <input aria-label="Nombre" name="name" defaultValue={d?.name} placeholder="Tarjeta Visa" required className="input" />
       </div>
       <div>
         <label className="label">Entidad</label>
-        <input name="creditor" defaultValue={d?.creditor ?? ''} placeholder="Bancolombia" className="input" />
+        <input aria-label="Entidad" name="creditor" defaultValue={d?.creditor ?? ''} placeholder="Bancolombia" className="input" />
       </div>
       <div>
         <label className="label">Saldo actual</label>
-        <input name="balance" defaultValue={d ? Number(d.balance).toLocaleString('es-CO') : ''} inputMode="decimal" required className="input" />
+        <input aria-label="Saldo actual" name="balance" defaultValue={d ? Number(d.balance).toLocaleString('es-CO') : ''} inputMode="decimal" required className="input" />
       </div>
       <div>
         <label className="label">Monto original</label>
-        <input name="original_amount" defaultValue={d ? Number(d.original_amount).toLocaleString('es-CO') : ''} inputMode="decimal" className="input" />
+        <input aria-label="Monto original" name="original_amount" defaultValue={d ? Number(d.original_amount).toLocaleString('es-CO') : ''} inputMode="decimal" className="input" />
       </div>
       <div>
         <label className="label">Tasa E.A. (%)</label>
-        <input name="annual_rate" defaultValue={d ? (Number(d.annual_rate) * 100).toFixed(2) : ''} placeholder="28" inputMode="decimal" className="input" />
+        <input aria-label="Tasa E.A. (%)" name="annual_rate" defaultValue={d ? (Number(d.annual_rate) * 100).toFixed(2) : ''} placeholder="28" inputMode="decimal" className="input" />
       </div>
       <div>
         <label className="label">Cuota mensual</label>
-        <input name="monthly_payment" defaultValue={d ? Number(d.monthly_payment).toLocaleString('es-CO') : ''} inputMode="decimal" className="input" />
+        <input aria-label="Cuota mensual" name="monthly_payment" defaultValue={d ? Number(d.monthly_payment).toLocaleString('es-CO') : ''} inputMode="decimal" className="input" />
       </div>
       <div>
         <label className="label">Día de pago</label>
-        <input name="due_day" type="number" min={1} max={31} defaultValue={d?.due_day ?? ''} className="input" />
+        <input aria-label="Día de pago" name="due_day" type="number" min={1} max={31} defaultValue={d?.due_day ?? ''} className="input" />
       </div>
     </div>
   )
@@ -100,7 +100,7 @@ export default async function DeudasPage(props: PageProps<'/deudas'>) {
                 <form action={quickMovement} className="mt-4 flex gap-2">
                   <input type="hidden" name="kind" value="debt_payment" />
                   <input type="hidden" name="target_id" value={d.id} />
-                  <input name="amount" placeholder="Abono" inputMode="decimal" required className="input" />
+                  <input name="amount" aria-label="Abono" placeholder="Abono" inputMode="decimal" required className="input" />
                   <SubmitButton>Abonar</SubmitButton>
                 </form>
                 <details className="mt-3">
@@ -126,7 +126,7 @@ export default async function DeudasPage(props: PageProps<'/deudas'>) {
           <form className="mb-4 flex flex-wrap items-end gap-2">
             <div>
               <label className="label">¿Cuánto pueden destinar al mes en total?</label>
-              <input name="pago" defaultValue={budget.toLocaleString('es-CO')} inputMode="decimal" className="input" />
+              <input aria-label="¿Cuánto pueden destinar al mes en total?" name="pago" defaultValue={budget.toLocaleString('es-CO')} inputMode="decimal" className="input" />
             </div>
             <button className="btn-ghost">Calcular</button>
           </form>

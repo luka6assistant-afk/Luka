@@ -11,15 +11,15 @@ export default function RegistroPage() {
         <NextField />
         <div>
           <label className="label">Tu nombre</label>
-          <input name="name" required className="input" autoComplete="name" />
+          <input aria-label="Tu nombre" name="name" required className="input" autoComplete="name" />
         </div>
         <div>
           <label className="label">Correo</label>
-          <input name="email" type="email" required className="input" autoComplete="email" />
+          <input aria-label="Correo" name="email" type="email" required className="input" autoComplete="email" />
         </div>
         <div>
           <label className="label">Contraseña (mín. 6 caracteres)</label>
-          <input name="password" type="password" minLength={6} required className="input" autoComplete="new-password" />
+          <input aria-label="Contraseña (mín. 6 caracteres)" name="password" type="password" minLength={6} required className="input" autoComplete="new-password" />
         </div>
         <LegalCheckbox />
         <SubmitButton className="btn w-full">Crear cuenta</SubmitButton>
