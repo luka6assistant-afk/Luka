@@ -71,7 +71,7 @@ En producción (Vercel) pon las mismas variables en el proyecto, despliega y cor
 
 | Plan | Precio | Lecturas con IA/mes | Deudas y ahorros |
 |---|---|---|---|
-| Prueba gratis | 14 días | 100 | Sí |
+| Prueba gratis | 30 días | 100 | Sí |
 | Familia | 14.900 COP/mes · 149.000/año | 100 | No |
 | Familia Plus | 24.900 COP/mes · 249.000/año | 1.000 | Sí |
 

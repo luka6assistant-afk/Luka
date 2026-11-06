@@ -72,7 +72,7 @@ export async function fetchTransaction(id: string): Promise<WompiTransaction | n
   return body.data ?? null
 }
 
-export type ApplyResult = 'applied' | 'already_applied' | 'not_approved' | 'amount_mismatch' | 'not_found'
+export type ApplyResult = 'applied' | 'applied_referral' | 'already_applied' | 'not_approved' | 'amount_mismatch' | 'not_found'
 
 /** Registra el estado de la transacción y, si fue aprobada, extiende el plan (una sola vez). */
 export async function applyTransaction(tx: WompiTransaction): Promise<ApplyResult> {
@@ -86,5 +86,9 @@ export async function applyTransaction(tx: WompiTransaction): Promise<ApplyResul
     tx_method: tx.payment_method_type ?? null,
   })
   if (error) throw error
+  if (data === 'applied_referral') {
+    const { notifyReferralReward } = await import('./growth')
+    await notifyReferralReward(tx.reference).catch((e) => console.error('Aviso de referido', e))
+  }
   return data as ApplyResult
 }

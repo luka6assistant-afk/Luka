@@ -15,7 +15,7 @@ Revisada el 6 de noviembre de 2026. ✅ resuelto en la app · 🟡 pendiente de 
 | Política de reembolsos | ✅ ⚠️ | `/reembolsos`. Revisa los compromisos que puse: reembolso total en retracto, cobro por error o plan no activado; compensación de 7 días por caídas de más de 72 h |
 | Política de cookies | ✅ | `/cookies`: solo cookies necesarias (sesión), sin publicidad ni analítica |
 | Banner de cookies | ✅ | Aviso informativo abajo; se cierra con "Entendido" y no bloquea. No pide aceptar porque no hay cookies opcionales |
-| Datos de la empresa | 🟡 | Hoy dice **"Luka SAS"**, pero esa empresa no existe: es una afirmación falsa. Mientras no la constituyas, el responsable debe ser la persona natural (nombre, cédula, dirección, correo, teléfono). Se cambia en `NEXT_PUBLIC_LEGAL_*` en Vercel |
+| Datos de la empresa | 🟡 | Decisión (6 nov 2026): se deja **"Luka SAS"** mientras la prueba es solo entre conocidos. **Antes de vender** hay que constituir la empresa (o usar los datos de la persona natural) y actualizar `NEXT_PUBLIC_LEGAL_*` en Vercel: razón social, NIT, dirección, correo y teléfono |
 
 ## Datos personales
 

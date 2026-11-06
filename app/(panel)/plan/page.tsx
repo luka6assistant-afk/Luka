@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { requireFamily } from '@/lib/session'
-import { PLANS, getAccess, type PaidPlanId } from '@/lib/plans'
+import { FOUNDER, PLANS, REFERRAL_DAYS, getAccess, priceFor, type PaidPlanId } from '@/lib/plans'
+import { founderSlots, referralStats, referralUrl } from '@/lib/growth'
+import { CopyButton } from '@/components/copy-button'
 import { money } from '@/lib/format'
 import { startCheckout } from '@/app/actions'
 import { paymentsEnabled } from '@/lib/wompi'
@@ -17,10 +19,14 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function PlanPage() {
   const { supabase, family } = await requireFamily()
-  const [access, { data: payments }] = await Promise.all([
+  const [access, { data: payments }, slots, refs] = await Promise.all([
     getAccess(supabase, family),
     supabase.from('payments').select('*').eq('family_id', family.id).order('created_at', { ascending: false }).limit(10),
+    founderSlots(),
+    referralStats(family.id),
   ])
+  const founderPrice = !!family.founder || slots.remaining > 0
+  const inviteUrl = referralUrl(family)
   const untilLabel = access.until.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Bogota' })
 
   return (
@@ -51,8 +57,26 @@ export default async function PlanPage() {
         </div>
       </Card>
 
+      {family.founder ? (
+        <p className="rounded-2xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-700">
+          🌱 <b>Son familia fundadora.</b> Conservan el plan {PLANS[FOUNDER.plan].name} a {money(FOUNDER.monthlyPrice)} al mes o{' '}
+          {money(FOUNDER.yearlyPrice)} al año para siempre, aunque los precios suban.
+        </p>
+      ) : (
+        founderPrice && (
+          <p className="rounded-2xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-700">
+            🌱 <b>Precio de fundador:</b> las primeras {FOUNDER.limit} familias que paguen el plan {PLANS[FOUNDER.plan].name} lo tienen
+            a {money(FOUNDER.monthlyPrice)} al mes o {money(FOUNDER.yearlyPrice)} al año <b>para siempre</b>. Quedan{' '}
+            <b>{slots.remaining}</b> de {FOUNDER.limit} cupos.
+          </p>
+        )
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
         {(['familia', 'plus'] as PaidPlanId[]).map((id) => {
+          const founder = founderPrice && id === FOUNDER.plan
+          const monthly = priceFor(id, 'monthly', founder)
+          const yearly = priceFor(id, 'yearly', founder)
           const p = PLANS[id]
           const current = access.plan.id === id && access.active
           return (
@@ -65,10 +89,11 @@ export default async function PlanPage() {
                 {id === 'plus' && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">Para familias grandes</span>}
               </div>
               <p className="mt-2">
-                <span className="text-3xl font-bold tabular-nums">{money(p.monthlyPrice)}</span>
+                <span className="text-3xl font-bold tabular-nums">{money(monthly)}</span>
                 <span className="text-slate-500"> /mes</span>
+                {founder && <span className="ml-2 text-sm text-slate-500">Precio normal {money(p.monthlyPrice)}</span>}
               </p>
-              <p className="text-sm text-slate-500">o {money(p.yearlyPrice)} al año (2 meses gratis)</p>
+              <p className="text-sm text-slate-500">o {money(yearly)} al año (2 meses gratis)</p>
               <ul className="mt-4 space-y-1.5 text-sm">
                 {p.features.map((f) => (
                   <li key={f}>✓ {f}</li>
@@ -77,9 +102,9 @@ export default async function PlanPage() {
               {paymentsEnabled ? (
                 <form action={startCheckout} className="mt-6 grid grid-cols-2 gap-2">
                   <input type="hidden" name="plan" value={id} />
-                  <SubmitButton className="btn">Pagar 1 mes · {money(p.monthlyPrice)}</SubmitButton>
+                  <SubmitButton className="btn">Pagar 1 mes · {money(monthly)}</SubmitButton>
                   <button type="submit" name="period" value="yearly" className="btn">
-                    Pagar 1 año · {money(p.yearlyPrice)}
+                    Pagar 1 año · {money(yearly)}
                   </button>
                 </form>
               ) : (
@@ -104,6 +129,27 @@ export default async function PlanPage() {
         </Link>
         ).
       </p>
+
+      <Card title="🎁 Invita a otra familia y ganen un mes">
+        <p className="text-sm text-slate-700">
+          Comparte tu enlace. Cuando la familia que invites pague su primer plan, <b>las dos reciben {REFERRAL_DAYS} días gratis</b>.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <input readOnly aria-label="Tu enlace de invitación" value={inviteUrl} className="input flex-1 font-mono text-xs" />
+          <CopyButton value={inviteUrl} />
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`Estoy usando Luka para llevar las cuentas de la casa desde Telegram: mandas la foto del recibo y listo. Pruébalo gratis: ${inviteUrl}`)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-ghost"
+          >
+            Enviar por WhatsApp
+          </a>
+        </div>
+        <p className="mt-2 text-xs text-slate-600">
+          Familias invitadas: {refs.invited} · ya pagaron (recompensa entregada): {refs.rewarded}
+        </p>
+      </Card>
 
       {!!payments?.length && (
         <Card title="Historial de pagos">

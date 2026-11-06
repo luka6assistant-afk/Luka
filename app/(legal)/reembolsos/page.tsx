@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LEGAL } from '@/lib/legal'
-import { PLANS } from '@/lib/plans'
+import { PLANS, TRIAL_DAYS } from '@/lib/plans'
 import { money } from '@/lib/format'
 
 export const metadata: Metadata = { title: 'Política de reembolsos — Luka' }
@@ -30,7 +30,7 @@ export default function ReembolsosPage() {
           {money(PLANS.plus.yearlyPrice)} al año.
         </li>
         <li>Es el precio final, sin cargos adicionales. No hay renovación automática ni guardamos tu tarjeta.</li>
-        <li>Antes de pagar puedes usar la prueba gratis de 14 días, sin dar ningún medio de pago.</li>
+        <li>Antes de pagar puedes usar la prueba gratis de {TRIAL_DAYS} días, sin dar ningún medio de pago.</li>
       </ul>
 
       <h2>2. Cuándo te devolvemos el dinero completo</h2>

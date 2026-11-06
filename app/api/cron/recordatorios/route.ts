@@ -1,12 +1,15 @@
 import { bot, ensureBotReady } from '@/lib/bot'
 import { createAdminClient } from '@/lib/supabase/server'
 import { computeAccess } from '@/lib/plans'
+import { onboardingMessage } from '@/lib/onboarding'
 import type { Family } from '@/lib/types'
 
 export const maxDuration = 60
 
 /**
- * Recordatorio diario por Telegram cuando la prueba o el plan vence en ≤ 3 días o acaba de vencer.
+ * Tarea diaria por Telegram (máximo un mensaje por familia al día):
+ * · Durante la prueba: mensajes de bienvenida y uso (ver lib/onboarding.ts).
+ * · Recordatorio cuando la prueba o el plan vence en ≤ 3 días o acaba de vencer.
  * Vercel Cron llama esta ruta con `Authorization: Bearer $CRON_SECRET` (ver vercel.json).
  */
 export async function GET(request: Request) {
@@ -20,9 +23,20 @@ export async function GET(request: Request) {
   const app = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const twoDaysAgo = Date.now() - 2 * 86_400_000
   let sent = 0
+  let onboarding = 0
 
   await ensureBotReady()
-  for (const fam of (data ?? []) as Family[]) {
+  for (const fam of (data ?? []) as (Family & { created_at: string })[]) {
+    try {
+      const tip = await onboardingMessage(db, fam)
+      if (tip) {
+        await bot.api.sendMessage(fam.telegram_chat_id!, tip, { link_preview_options: { is_disabled: true } })
+        onboarding++
+        continue
+      }
+    } catch (err) {
+      console.error('No se pudo enviar el mensaje de la prueba a', fam.id, err)
+    }
     const a = computeAccess(fam, 0)
     const msLeft = a.until.getTime() - Date.now()
     const dueSoon = msLeft > 0 && a.daysLeft <= 3
@@ -42,5 +56,5 @@ export async function GET(request: Request) {
       console.error('No se pudo enviar recordatorio a', fam.id, err)
     }
   }
-  return Response.json({ sent })
+  return Response.json({ sent, onboarding })
 }

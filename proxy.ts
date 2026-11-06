@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { COOKIE_OPTIONS } from './lib/supabase/cookie-options'
 
-const PUBLIC_PATHS = ['/login', '/registro', '/terminos', '/privacidad', '/reembolsos', '/cookies', '/tg', '/api/']
+const PUBLIC_PATHS = ['/inicio', '/r/', '/robots.txt', '/sitemap.xml', '/login', '/registro', '/terminos', '/privacidad', '/reembolsos', '/cookies', '/tg', '/api/']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -34,6 +34,12 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p))
+  // Sin sesión, la portada es la página de presentación (la URL sigue siendo "/")
+  if (!user && path === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/inicio'
+    return NextResponse.rewrite(url)
+  }
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'

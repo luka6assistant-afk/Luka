@@ -5,12 +5,27 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { safeNext } from '@/lib/safe-next'
 
+/** Código de invitación de otra familia (?ref=…), solo letras y números. */
+const cleanRef = (v: string | null) => (v && /^[A-Za-z0-9]{5,10}$/.test(v) ? v.toUpperCase() : null)
+
 function Field() {
-  const next = safeNext(useSearchParams().get('next'))
-  return next ? <input type="hidden" name="next" value={next} /> : null
+  const params = useSearchParams()
+  const next = safeNext(params.get('next'))
+  const ref = cleanRef(params.get('ref'))
+  return (
+    <>
+      {next && <input type="hidden" name="next" value={next} />}
+      {ref && <input type="hidden" name="ref" value={ref} />}
+      {ref && (
+        <p className="rounded-lg bg-brand-50 p-3 text-sm text-brand-700">
+          🎁 Llegaste invitado: cuando paguen su primer plan, tu familia y la que te invitó reciben un mes gratis.
+        </p>
+      )}
+    </>
+  )
 }
 
-/** Campo oculto con la ruta a la que volver después de iniciar sesión o registrarse. */
+/** Campos ocultos con la ruta a la que volver (?next=) y el código de invitación (?ref=). */
 export function NextField() {
   return (
     <Suspense>
@@ -20,15 +35,21 @@ export function NextField() {
 }
 
 function KeepNext({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
-  const next = safeNext(useSearchParams().get('next'))
+  const params = useSearchParams()
+  const q = new URLSearchParams()
+  const next = safeNext(params.get('next'))
+  const ref = cleanRef(params.get('ref'))
+  if (next) q.set('next', next)
+  if (ref) q.set('ref', ref)
+  const qs = q.toString()
   return (
-    <Link href={next ? `${href}?next=${encodeURIComponent(next)}` : href} className={className}>
+    <Link href={qs ? `${href}?${qs}` : href} className={className}>
       {children}
     </Link>
   )
 }
 
-/** Enlace entre login y registro que conserva ?next= */
+/** Enlace entre login y registro que conserva ?next= y ?ref= */
 export function NextLink(props: { href: string; children: React.ReactNode; className?: string }) {
   return (
     <Suspense

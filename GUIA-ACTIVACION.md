@@ -116,7 +116,7 @@ empieces a cobrar** debes pasar a Vercel Pro (unos US$20 al mes).
 
 ## Paso 8 · Wompi (cobrar a los clientes) — sin mensualidad, comisión por pago
 
-Puedes dejarlo para después: mientras no lo configures, todos los clientes quedan en la prueba gratis de 14 días.
+Puedes dejarlo para después: mientras no lo configures, todos los clientes quedan en la prueba gratis de 30 días.
 
 1. Crea la cuenta de comercio en <https://comercios.wompi.co> con el correo nuevo.
 2. Empieza en **modo pruebas (sandbox)**: en **Desarrolladores** copia la llave pública `pub_test_…`, el secreto de

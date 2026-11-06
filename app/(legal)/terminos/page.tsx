@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LEGAL } from '@/lib/legal'
-import { PLANS } from '@/lib/plans'
+import { FOUNDER, PLANS, REFERRAL_DAYS, TRIAL_DAYS } from '@/lib/plans'
 import { money } from '@/lib/format'
 
 export const metadata: Metadata = { title: 'Términos y condiciones — Luka' }
@@ -66,7 +66,7 @@ export default function TerminosPage() {
 
       <h2>6. Planes, precios y pagos</h2>
       <ul>
-        <li>Cada familia nueva tiene una prueba gratis de 14 días, sin pedir medio de pago.</li>
+        <li>Cada familia nueva tiene una prueba gratis de {TRIAL_DAYS} días, sin pedir medio de pago.</li>
         <li>
           Planes vigentes: {PLANS.familia.name} a {money(PLANS.familia.monthlyPrice)} al mes o {money(PLANS.familia.yearlyPrice)}{' '}
           al año, y {PLANS.plus.name} a {money(PLANS.plus.monthlyPrice)} al mes o {money(PLANS.plus.yearlyPrice)} al año. Es el
@@ -85,6 +85,16 @@ export default function TerminosPage() {
           Si el plan vence, el bot deja de leer recibos. Tus datos se conservan y puedes seguir viendo el panel.
         </li>
         <li>Si cambiamos los precios, te avisaremos con al menos 30 días de anticipación. El cambio no afecta periodos ya pagados.</li>
+        <li>
+          <b>Precio de fundador:</b> las primeras {FOUNDER.limit} familias que paguen el plan {PLANS[FOUNDER.plan].name} con este
+          precio lo conservan ({money(FOUNDER.monthlyPrice)} al mes o {money(FOUNDER.yearlyPrice)} al año) mientras la familia
+          tenga cuenta en {L.product}, aunque los precios cambien. El cupo se asigna cuando se aprueba el primer pago con ese precio.
+        </li>
+        <li>
+          <b>Invitaciones:</b> si una familia se registra con el enlace de invitación de otra y paga su primer plan, las dos reciben{' '}
+          {REFERRAL_DAYS} días gratis, una sola vez por familia invitada. No tiene valor en dinero ni se puede cambiar por efectivo.
+          Si detectamos registros falsos para obtener días gratis, podemos anularlos.
+        </li>
       </ul>
 
       <h2>7. Derecho de retracto, reembolsos y reversión del pago</h2>

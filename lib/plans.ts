@@ -25,7 +25,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     yearlyPrice: 0,
     aiLimit: 100,
     debts: true,
-    features: ['14 días con todo incluido', 'Hasta 100 lecturas con IA'],
+    features: ['30 días con todo incluido', 'Hasta 100 lecturas con IA al mes'],
   },
   familia: {
     id: 'familia',
@@ -47,7 +47,25 @@ export const PLANS: Record<PlanId, PlanInfo> = {
   },
 }
 
-export function priceFor(plan: PaidPlanId, period: Period): number {
+/** Días de prueba gratis al crear una familia (debe coincidir con supabase/006_crecimiento.sql). */
+export const TRIAL_DAYS = 30
+
+/**
+ * Precio de fundador: las primeras familias que paguen el plan Familia lo conservan para siempre,
+ * aunque los precios suban. Se marca al aprobarse su primer pago con este precio.
+ */
+export const FOUNDER = {
+  limit: 20,
+  plan: 'familia' as PaidPlanId,
+  monthlyPrice: 9_900,
+  yearlyPrice: 99_000,
+}
+
+/** Días gratis para cada familia cuando una familia invitada paga su primer plan. */
+export const REFERRAL_DAYS = 30
+
+export function priceFor(plan: PaidPlanId, period: Period, founder = false): number {
+  if (founder && plan === FOUNDER.plan) return period === 'yearly' ? FOUNDER.yearlyPrice : FOUNDER.monthlyPrice
   return period === 'yearly' ? PLANS[plan].yearlyPrice : PLANS[plan].monthlyPrice
 }
 

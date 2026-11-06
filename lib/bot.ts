@@ -7,7 +7,7 @@ import { transcribe, transcriptionEnabled } from './transcribe'
 import { getMonthSummary, debtPayoff, requiredMonthly } from './finance'
 import { money, monthLabel, monthStart, todayISO, dateLabel } from './format'
 import { monthlyReport } from './reports'
-import { PLANS, getAccess } from './plans'
+import { PLANS, REFERRAL_DAYS, getAccess } from './plans'
 import { LEGAL } from './legal'
 import { FEATURES } from './features'
 import { KIND_LABEL, type Category, type Debt, type Family, type Member, type SavingsGoal, type Transaction } from './types'
@@ -176,6 +176,7 @@ const HELP = [
   '/reporte — resumen del mes con el archivo de movimientos (/reporte anterior para el mes pasado)',
   '/panel — abrir el panel aquí mismo en Telegram',
   '/plan — plan, lecturas usadas y pago',
+  '/invitar — invita a otra familia y ganen un mes gratis',
   '/vincular CÓDIGO — conectar este chat con la familia',
   '/privacidad — cómo tratamos tus datos',
 ].join('\n')
@@ -353,6 +354,21 @@ bot.command('reporte', async (ctx) => {
   const month = monthStart(previous ? -1 : 0)
   const sent = await sendMonthlyReport(ctx.chat.id, fam, month)
   if (!sent) return ctx.reply(`No hay movimientos en ${monthLabel(month)}.${previous ? '' : ' Para ver el mes pasado escriban /reporte anterior.'}`)
+})
+
+bot.command('invitar', async (ctx) => {
+  const fam = await requireFamily(ctx)
+  if (!fam) return
+  const url = `${APP_URL}/r/${fam.referral_code ?? ''}`
+  return ctx.reply(
+    [
+      '🎁 <b>Invita a otra familia y ganen un mes</b>',
+      `Compartan este enlace. Cuando la familia que inviten pague su primer plan, las dos reciben ${REFERRAL_DAYS} días gratis.`,
+      '',
+      url,
+    ].join('\n'),
+    { parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
+  )
 })
 
 bot.command(['meta', 'metas', 'ahorros'], async (ctx) => {

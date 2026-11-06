@@ -35,6 +35,7 @@ console.log(
       { command: 'reporte', description: 'Resumen del mes con archivo de movimientos' },
       { command: 'panel', description: 'Abrir el panel aquí en Telegram' },
       { command: 'plan', description: 'Plan, lecturas usadas y pago' },
+      { command: 'invitar', description: 'Invita a otra familia y ganen un mes' },
       { command: 'vincular', description: 'Conectar este chat con la familia' },
       { command: 'privacidad', description: 'Cómo tratamos tus datos' },
       { command: 'ayuda', description: 'Cómo usar el bot' },

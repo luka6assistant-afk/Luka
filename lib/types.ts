@@ -12,6 +12,12 @@ export interface Family {
   paid_until: string | null
   last_reminder_at: string | null
   last_report_month?: string | null
+  founder?: boolean
+  founder_since?: string | null
+  referral_code?: string
+  referred_by?: string | null
+  referral_rewarded_at?: string | null
+  onboarding_sent?: string[]
   created_at?: string
 }
 

@@ -9,6 +9,7 @@ import { parseCOP, todayISO } from '@/lib/format'
 import { priceFor, type PaidPlanId, type Period } from '@/lib/plans'
 import { checkoutUrl, paymentsEnabled } from '@/lib/wompi'
 import { recordConsent } from '@/lib/consent'
+import { familyByReferralCode, founderPriceApplies } from '@/lib/growth'
 import { safeNext } from '@/lib/safe-next'
 
 export type FormState = { error?: string; ok?: string } | undefined
@@ -36,7 +37,7 @@ export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
   const { data, error } = await supabase.auth.signUp({
     email: str(fd, 'email'),
     password: str(fd, 'password'),
-    options: { data: { full_name: str(fd, 'name') } },
+    options: { data: { full_name: str(fd, 'name'), ...(str(fd, 'ref') ? { ref: str(fd, 'ref').toUpperCase().slice(0, 10) } : {}) } },
   })
   if (error) return { error: error.message }
   // Si el correo ya existía, Supabase devuelve un usuario sin identidades: no hay a quién asociar la aceptación
@@ -84,6 +85,11 @@ export async function createFamily(_: FormState, fd: FormData): Promise<FormStat
     .from('family_members')
     .insert({ family_id: fam.id, user_id: user.id, display_name: str(fd, 'name') || user.email!, role: 'admin' })
   if (mErr) return { error: mErr.message }
+  const ref = typeof user.user_metadata?.ref === 'string' ? user.user_metadata.ref : ''
+  if (ref) {
+    const inviter = await familyByReferralCode(ref)
+    if (inviter && inviter.id !== fam.id) await createAdminClient().from('families').update({ referred_by: inviter.id }).eq('id', fam.id)
+  }
   redirect('/familia')
 }
 
@@ -154,7 +160,8 @@ export async function startCheckout(fd: FormData) {
   if (!paymentsEnabled) throw new Error('Los pagos todavía no están habilitados.')
   const plan = (str(fd, 'plan') === 'plus' ? 'plus' : 'familia') as PaidPlanId
   const period = (str(fd, 'period') === 'yearly' ? 'yearly' : 'monthly') as Period
-  const amountInCents = priceFor(plan, period) * 100
+  const founder = plan === 'familia' && (await founderPriceApplies(family))
+  const amountInCents = priceFor(plan, period, founder) * 100
   const reference = `CF-${family.id.slice(0, 8)}-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 6)}`.toUpperCase()
 
   const { error } = await supabase.from('payments').insert({
@@ -163,6 +170,7 @@ export async function startCheckout(fd: FormData) {
     plan,
     period,
     amount_in_cents: amountInCents,
+    tier: founder ? 'founder' : 'standard',
     created_by: user.id,
   })
   if (error) throw new Error(`No se pudo iniciar el pago: ${error.message}`)
