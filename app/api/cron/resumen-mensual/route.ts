@@ -1,3 +1,4 @@
+import { hasCronSecret } from '@/lib/secure'
 import { ensureBotReady, sendMonthlyReport } from '@/lib/bot'
 import { createAdminClient } from '@/lib/supabase/server'
 import { monthStart } from '@/lib/format'
@@ -11,8 +12,7 @@ export const maxDuration = 300
  * Es seguro repetirla: cada familia recibe el resumen de un mes una sola vez.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET
-  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!hasCronSecret(request)) {
     return new Response('No autorizado', { status: 401 })
   }
 

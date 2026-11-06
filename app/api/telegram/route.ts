@@ -1,3 +1,4 @@
+import { safeEqual } from '@/lib/secure'
 import { after } from 'next/server'
 import type { Update } from 'grammy/types'
 import { bot, ensureBotReady } from '@/lib/bot'
@@ -11,7 +12,7 @@ export const maxDuration = 60
  */
 export async function POST(request: Request) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (!secret || request.headers.get('x-telegram-bot-api-secret-token') !== secret) {
+  if (!safeEqual(request.headers.get('x-telegram-bot-api-secret-token'), secret)) {
     return new Response('No autorizado', { status: 401 })
   }
   const update = (await request.json()) as Update

@@ -1,6 +1,7 @@
 import { requireFamily } from '@/lib/session'
 import type { Member } from '@/lib/types'
-import { linkMemberToMe, removeMember, renameFamily, setMemberRole, unlinkTelegram } from '@/app/actions'
+import { TelegramLinkCode } from '@/components/telegram-link-code'
+import { removeMember, renameFamily, setMemberRole, unlinkTelegram } from '@/app/actions'
 import { Card } from '@/components/cards'
 import { AutoSubmitSelect, ConfirmButton, SubmitButton } from '@/components/ui'
 import { CopyButton } from '@/components/copy-button'
@@ -81,14 +82,6 @@ export default async function FamiliaPage() {
                 </span>
               </span>
               <span className="flex items-center gap-2 text-xs text-slate-500">
-                {!m.user_id && !member.telegram_user_id && (
-                  <form action={linkMemberToMe}>
-                    <input type="hidden" name="member_id" value={m.id} />
-                    <ConfirmButton message={`¿${m.display_name} en Telegram eres tú? Se unirán sus movimientos a tu cuenta.`} className="btn-ghost text-xs">
-                      Soy yo
-                    </ConfirmButton>
-                  </form>
-                )}
                 {isAdmin ? (
                   <>
                     <form action={setMemberRole}>
@@ -116,10 +109,15 @@ export default async function FamiliaPage() {
         </ul>
         <p className="mt-3 text-xs text-slate-500">
           Administrador: gestiona la familia, categorías, presupuestos y metas. Miembro: registra movimientos y aportes, y consulta
-          reportes. Quien escribe en el grupo de Telegram queda registrado como miembro; con “Soy yo” unes tu usuario de Telegram a tu
-          cuenta web.
+          reportes. Quien escribe en el grupo de Telegram queda registrado como miembro.
         </p>
       </Card>
+
+      {!member.telegram_user_id && (
+        <Card title="✈️ Conectar mi Telegram (Soy yo)">
+          <TelegramLinkCode />
+        </Card>
+      )}
     </div>
   )
 }

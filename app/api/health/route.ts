@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
+import { hasCronSecret } from '@/lib/secure'
 
 /**
  * Diagnóstico de la configuración: dice qué llaves faltan o son rechazadas, sin mostrarlas.
- * Uso: /api/health?clave=CRON_SECRET
+ * Uso: GET /api/health con el encabezado `Authorization: Bearer CRON_SECRET`
+ * (en el encabezado y no en la URL, para que el secreto no quede en registros ni en el historial).
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET
-  if (!secret || new URL(request.url).searchParams.get('clave') !== secret)
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!hasCronSecret(request)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   // Se prueba el valor tal cual (como lo usa la app): espacios o comillas sobrantes hacen fallar las llaves
   const env = (k: string) => process.env[k] ?? ''

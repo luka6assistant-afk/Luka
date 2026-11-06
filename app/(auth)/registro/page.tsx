@@ -18,8 +18,8 @@ export default function RegistroPage() {
           <input aria-label="Correo" name="email" type="email" required className="input" autoComplete="email" />
         </div>
         <div>
-          <label className="label">Contraseña (mín. 6 caracteres)</label>
-          <input aria-label="Contraseña (mín. 6 caracteres)" name="password" type="password" minLength={6} required className="input" autoComplete="new-password" />
+          <label className="label">Contraseña (mín. 8 caracteres)</label>
+          <input aria-label="Contraseña (mín. 8 caracteres)" name="password" type="password" minLength={8} required className="input" autoComplete="new-password" />
         </div>
         <LegalCheckbox />
         <SubmitButton className="btn w-full">Crear cuenta</SubmitButton>

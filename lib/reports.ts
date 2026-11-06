@@ -45,7 +45,9 @@ export async function listTransactions(db: SupabaseClient, familyId: string, fro
  */
 export function transactionsCsv(rows: TxRow[]): Buffer {
   const cell = (v: string | number | null | undefined) => {
-    const s = v === null || v === undefined ? '' : String(v)
+    let s = v === null || v === undefined ? '' : String(v)
+    // Evita que Excel ejecute como fórmula un texto que empiece por = + - @ (inyección de fórmulas)
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`
     return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
   const header = ['Fecha', 'Tipo', 'Monto', 'Categoría', 'Comercio', 'Descripción', 'Quién', 'Medio de pago', 'Estado', 'Origen']

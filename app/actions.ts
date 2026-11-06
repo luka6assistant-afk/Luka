@@ -33,6 +33,7 @@ export async function signUp(_: FormState, fd: FormData): Promise<FormState> {
   if (fd.get('accept') !== 'on') {
     return { error: 'Para crear la cuenta debes aceptar los términos y autorizar el tratamiento de tus datos.' }
   }
+  if (str(fd, 'password').length < 8) return { error: 'La contraseña debe tener al menos 8 caracteres.' }
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
     email: str(fd, 'email'),
@@ -107,31 +108,27 @@ export async function renameFamily(fd: FormData) {
 }
 
 export async function unlinkTelegram() {
-  const { supabase, family } = await requireAdmin()
-  await supabase.from('families').update({ telegram_chat_id: null }).eq('id', family.id)
+  // El chat vinculado solo lo cambia el servidor (la base de datos lo bloquea desde el navegador)
+  const { family } = await requireAdmin()
+  await createAdminClient().from('families').update({ telegram_chat_id: null }).eq('id', family.id)
   revalidatePath('/familia')
 }
 
-export async function linkMemberToMe(fd: FormData) {
-  // Une un miembro creado por Telegram con la cuenta web actual
-  const { supabase, member, family } = await requireFamily()
-  if (member.telegram_user_id) return
-  const { data: tm } = await supabase
-    .from('family_members')
-    .select('*')
-    .eq('id', str(fd, 'member_id'))
-    .eq('family_id', family.id)
-    .is('user_id', null)
-    .maybeSingle()
-  if (!tm) return
-  const admin = createAdminClient()
-  await admin.from('transactions').update({ member_id: member.id }).eq('member_id', tm.id)
-  await admin.from('family_members').delete().eq('id', tm.id)
-  await admin
-    .from('family_members')
-    .update({ telegram_user_id: tm.telegram_user_id, privacy_notice_at: tm.privacy_notice_at })
-    .eq('id', member.id)
-  revalidatePath('/familia')
+/**
+ * "Soy yo": genera un código de un solo uso (10 minutos) para unir tu usuario de Telegram a tu cuenta web.
+ * Se escribe en el grupo con /soyyo CÓDIGO: así se comprueba que la cuenta de Telegram es tuya.
+ */
+export async function createTelegramLinkCode(): Promise<FormState> {
+  const { member } = await requireFamily()
+  if (member.telegram_user_id) return { error: 'Tu cuenta ya está unida a Telegram.' }
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const bytes = crypto.getRandomValues(new Uint8Array(8))
+  const code = Array.from(bytes, (b) => alphabet[b % 32]).join('')
+  const { error } = await createAdminClient()
+    .from('telegram_link_codes')
+    .upsert({ member_id: member.id, code, expires_at: new Date(Date.now() + 10 * 60_000).toISOString() })
+  if (error) return { error: 'No se pudo generar el código. Intenta de nuevo.' }
+  return { ok: code }
 }
 
 export async function setMemberRole(fd: FormData) {
@@ -156,7 +153,7 @@ export async function removeMember(fd: FormData) {
 // ---------------------------------------------------------------------
 
 export async function startCheckout(fd: FormData) {
-  const { supabase, family, user } = await requireFamily()
+  const { family, user } = await requireFamily()
   if (!paymentsEnabled) throw new Error('Los pagos todavía no están habilitados.')
   const plan = (str(fd, 'plan') === 'plus' ? 'plus' : 'familia') as PaidPlanId
   const period = (str(fd, 'period') === 'yearly' ? 'yearly' : 'monthly') as Period
@@ -164,7 +161,8 @@ export async function startCheckout(fd: FormData) {
   const amountInCents = priceFor(plan, period, founder) * 100
   const reference = `CF-${family.id.slice(0, 8)}-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 6)}`.toUpperCase()
 
-  const { error } = await supabase.from('payments').insert({
+  // El pago lo crea el servidor con el precio calculado aquí (desde el navegador no se pueden crear pagos)
+  const { error } = await createAdminClient().from('payments').insert({
     family_id: family.id,
     reference,
     plan,
@@ -228,7 +226,9 @@ export async function deleteTransaction(fd: FormData) {
     .eq('family_id', family.id)
     .select('receipt_path')
     .maybeSingle()
-  if (data?.receipt_path) await supabase.storage.from('recibos').remove([data.receipt_path])
+  // La foto se borra con la llave del servidor (los miembros no tienen permiso de borrar archivos),
+  // solo si es de esta familia
+  if (data?.receipt_path?.startsWith(`${family.id}/`)) await createAdminClient().storage.from('recibos').remove([data.receipt_path])
   revalidatePath('/', 'layout')
 }
 

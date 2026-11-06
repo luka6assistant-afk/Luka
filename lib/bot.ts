@@ -192,6 +192,11 @@ bot.command('vincular', async (ctx) => {
   if (!code) return ctx.reply('Escriban /vincular seguido del código que aparece en el panel web, ej: /vincular A1B2C3')
   const { data: fam } = await db.from('families').select('*').eq('link_code', code).maybeSingle()
   if (!fam) return ctx.reply('Ese código no existe. Revísenlo en el panel web → Familia.')
+  // Una familia vinculada no se puede mover a otro chat con el código: primero hay que desvincularla en el panel
+  if (fam.telegram_chat_id && fam.telegram_chat_id !== ctx.chat.id)
+    return ctx.reply('Esa familia ya está conectada a otro chat. Si quieren cambiarlo, el administrador debe desvincularlo primero en el panel → Familia.')
+  const other = await familyForChat(ctx.chat.id)
+  if (other && other.id !== fam.id) return ctx.reply('Este chat ya está conectado a otra familia.')
   await db.from('families').update({ telegram_chat_id: ctx.chat.id }).eq('id', fam.id)
   if (ctx.from) {
     const m = await ensureMember(fam.id, ctx.from)
@@ -205,6 +210,34 @@ bot.command('vincular', async (ctx) => {
     ].join('\n\n'),
     { parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
   )
+})
+
+/** "Soy yo": une el usuario de Telegram de quien escribe con su cuenta web, usando el código del panel. */
+bot.command('soyyo', async (ctx) => {
+  const fam = await requireFamily(ctx)
+  if (!fam || !ctx.from) return
+  const code = ctx.match.trim().toUpperCase()
+  if (!/^[A-Z0-9]{8}$/.test(code))
+    return ctx.reply('Escribe /soyyo seguido del código que aparece en el panel → Familia → Conectar mi Telegram.')
+  const { data: link } = await db.from('telegram_link_codes').select('member_id, expires_at').eq('code', code).maybeSingle()
+  if (!link || new Date(link.expires_at).getTime() < Date.now())
+    return ctx.reply('Ese código no existe o ya venció. Generen uno nuevo en el panel → Familia.')
+  const { data: web } = await db.from('family_members').select('*').eq('id', link.member_id).eq('family_id', fam.id).maybeSingle()
+  if (!web) return ctx.reply('Ese código no es de esta familia.')
+  if (web.telegram_user_id) return ctx.reply('Esa cuenta ya está unida a Telegram.')
+  const { data: tg } = await db.from('family_members').select('*').eq('family_id', fam.id).eq('telegram_user_id', ctx.from.id).maybeSingle()
+  if (tg?.user_id) return ctx.reply('Tu usuario de Telegram ya está unido a una cuenta web.')
+  if (tg) {
+    // Los movimientos que registró desde Telegram pasan a su cuenta web
+    await db.from('transactions').update({ member_id: web.id }).eq('member_id', tg.id)
+    await db.from('family_members').delete().eq('id', tg.id)
+  }
+  await db
+    .from('family_members')
+    .update({ telegram_user_id: ctx.from.id, privacy_notice_at: tg?.privacy_notice_at ?? new Date().toISOString() })
+    .eq('id', web.id)
+  await db.from('telegram_link_codes').delete().eq('member_id', web.id)
+  return ctx.reply(`✅ Listo, ${escapeHtml(web.display_name)}: tu Telegram quedó unido a tu cuenta.`, { parse_mode: 'HTML' })
 })
 
 bot.command('privacidad', (ctx) =>

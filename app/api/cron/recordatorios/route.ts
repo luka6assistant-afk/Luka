@@ -1,3 +1,4 @@
+import { hasCronSecret } from '@/lib/secure'
 import { bot, ensureBotReady } from '@/lib/bot'
 import { createAdminClient } from '@/lib/supabase/server'
 import { computeAccess } from '@/lib/plans'
@@ -13,8 +14,7 @@ export const maxDuration = 60
  * Vercel Cron llama esta ruta con `Authorization: Bearer $CRON_SECRET` (ver vercel.json).
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET
-  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!hasCronSecret(request)) {
     return new Response('No autorizado', { status: 401 })
   }
 

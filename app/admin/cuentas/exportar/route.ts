@@ -1,7 +1,9 @@
 import { loadAccounts, requireCreator } from '@/lib/creator'
 
 const cell = (v: string | number | null | undefined) => {
-  const s = v === null || v === undefined ? '' : String(v)
+  let s = v === null || v === undefined ? '' : String(v)
+  // Evita que Excel ejecute como fórmula un texto que empiece por = + - @
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`
   return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 const csv = (rows: (string | number | null)[][]) => '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n')
