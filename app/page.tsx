@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 }
 
 const STEPS = [
-  ['1', 'Creen la familia', 'Regístrense gratis y agreguen a Luka al grupo de Telegram de la familia.'],
+  ['1', 'Creen la familia', 'Regístrense gratis y, con un toque, agreguen a Luka al grupo de Telegram de la familia.'],
   ['2', 'Manden lo que pagan', 'La foto del recibo, la factura, el PDF del banco, una nota de voz o un mensaje como «mercado 85.000 en el D1».'],
   ['3', 'Vean a dónde se va la plata', 'Luka registra y clasifica cada gasto, les avisa si se pasan del presupuesto y el día 1 les manda el resumen del mes.'],
 ] as const
@@ -45,7 +45,7 @@ const FEATURES = [
 ] as const
 
 const FAQ = [
-  ['¿Necesito Telegram?', 'Sí. Luka funciona en un grupo de Telegram, que es gratis en celular y computador. El panel se abre dentro del mismo chat.'],
+  ['¿Necesito Telegram?', 'Sí. Luka funciona en un grupo de Telegram, que es gratis en celular y computador. Conectarlo toma menos de un minuto: en holaluka.vercel.app/como-conectar hay un video paso a paso.'],
   [
     '¿Qué pasa cuando termina la prueba?',
     `Nada se cobra solo: no pedimos tarjeta. Si no eligen un plan, Luka deja de leer recibos, pero sus datos se conservan y pueden seguir viendo el panel.`,

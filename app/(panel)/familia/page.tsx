@@ -49,15 +49,45 @@ export default async function FamiliaPage() {
             )}
           </div>
         ) : isAdmin ? (
-          <>
-            <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
-              <li>Agreguen el bot {botUser ? <b>@{botUser}</b> : 'de la familia'} al grupo de Telegram de la familia.</li>
-              <li>En el grupo escriban:</li>
-            </ol>
-            <div className="mt-3 rounded-xl bg-slate-900 p-4 text-center font-mono text-lg tracking-widest text-white">
-              /vincular {family.link_code}
-            </div>
-          </>
+          <div className="space-y-4 text-sm">
+            <p className="text-slate-700">
+              Desde el celular donde tienes Telegram, toca el botón: Telegram se abre, eliges el grupo de la familia (o creas uno nuevo)
+              y Luka queda conectado solo.
+            </p>
+            {botUser && (
+              <a
+                href={`https://t.me/${botUser}?startgroup=${family.link_code}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn w-full py-3 text-base"
+              >
+                ➕ Conectar con Telegram
+              </a>
+            )}
+            <p className="text-xs text-slate-600">
+              ¿No tienes Telegram? Instálalo gratis desde{' '}
+              <a href="https://telegram.org/apps" target="_blank" rel="noreferrer" className="underline">
+                telegram.org/apps
+              </a>{' '}
+              y vuelve aquí.{' '}
+              <a href="/como-conectar" className="font-medium text-brand-700 underline">
+                Ver el video paso a paso
+              </a>
+            </p>
+            <details className="rounded-lg border border-slate-200 p-3">
+              <summary className="cursor-pointer font-medium text-slate-700">¿No funcionó el botón? Hazlo a mano</summary>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-700">
+                <li>Abre el grupo de la familia en Telegram (o créalo).</li>
+                <li>
+                  Toca el nombre del grupo → <b>Agregar miembros</b> → busca {botUser ? <b>@{botUser}</b> : 'el bot'} y agrégalo.
+                </li>
+                <li>Escribe en el grupo:</li>
+              </ol>
+              <div className="mt-2 select-all rounded-xl bg-slate-900 p-3 text-center font-mono text-base tracking-widest text-white">
+                /vincular {family.link_code}
+              </div>
+            </details>
+          </div>
         ) : (
           <p className="text-sm text-slate-600">El administrador aún no ha conectado el chat de Telegram.</p>
         )}

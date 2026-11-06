@@ -185,13 +185,43 @@ const HELP = [
 // Comandos
 // ---------------------------------------------------------------------
 
-bot.command(['start', 'ayuda', 'help'], (ctx) => ctx.reply(HELP, { parse_mode: 'HTML' }))
+const isGroup = (ctx: Context) => ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup'
+const botName = () => BOT_USERNAME || bot.botInfo?.username || ''
+/** Enlace que abre Telegram para elegir o crear un grupo y agregar a Luka con el código de la familia. */
+const addToGroupUrl = (code: string) => `https://t.me/${botName()}?startgroup=${encodeURIComponent(code)}`
 
-bot.command('vincular', async (ctx) => {
-  const code = ctx.match.trim().toUpperCase()
-  if (!code) return ctx.reply('Escriban /vincular seguido del código que aparece en el panel web, ej: /vincular A1B2C3')
+/**
+ * /start CÓDIGO: llega cuando agregan a Luka con el botón "Conectar con Telegram" del panel
+ * (enlace t.me/bot?startgroup=CÓDIGO). En un grupo conecta la familia sin escribir nada más.
+ */
+bot.command('start', async (ctx) => {
+  const code = ctx.match.trim()
+  if (code && isGroup(ctx)) return linkChat(ctx, code)
+  if (code)
+    return ctx.reply(
+      'Para conectar tu familia, Luka tiene que estar en un grupo de Telegram. Toca el botón y elige el grupo de la familia o crea uno nuevo.',
+      { reply_markup: new InlineKeyboard().url('➕ Agregar Luka a un grupo', addToGroupUrl(code)) },
+    )
+  return ctx.reply(HELP, { parse_mode: 'HTML' })
+})
+
+bot.command(['ayuda', 'help'], (ctx) => ctx.reply(HELP, { parse_mode: 'HTML' }))
+
+bot.command('vincular', (ctx) => {
+  const code = ctx.match.trim()
+  if (!code)
+    return ctx.reply(
+      `Para conectar este grupo, en el panel → Familia toquen «Conectar con Telegram». También pueden escribir /vincular seguido del código que aparece ahí. Guía con video: ${APP_URL}/como-conectar`,
+      { link_preview_options: { is_disabled: true } },
+    )
+  return linkChat(ctx, code)
+})
+
+async function linkChat(ctx: Context, raw: string) {
+  const code = raw.trim().toUpperCase()
+  if (!ctx.chat) return
   const { data: fam } = await db.from('families').select('*').eq('link_code', code).maybeSingle()
-  if (!fam) return ctx.reply('Ese código no existe. Revísenlo en el panel web → Familia.')
+  if (!fam) return ctx.reply('Ese código no existe. Revísenlo en el panel → Familia, o usen el botón «Conectar con Telegram» que hay ahí.')
   // Una familia vinculada no se puede mover a otro chat con el código: primero hay que desvincularla en el panel
   if (fam.telegram_chat_id && fam.telegram_chat_id !== ctx.chat.id)
     return ctx.reply('Esa familia ya está conectada a otro chat. Si quieren cambiarlo, el administrador debe desvincularlo primero en el panel → Familia.')
@@ -204,12 +234,33 @@ bot.command('vincular', async (ctx) => {
   }
   return ctx.reply(
     [
-      `✅ Este chat quedó vinculado a <b>${escapeHtml(fam.name)}</b>.`,
+      `✅ ¡Listo! Este grupo quedó conectado a <b>${escapeHtml(fam.name)}</b>.`,
+      '📸 Prueben ya: envíen la foto de un recibo o escriban, por ejemplo, «mercado 85.000 en el D1».',
       `🔒 Lo que envíen al bot (recibos, montos, mensajes) lo lee una IA, lo ve toda la familia y se trata según la <a href="${APP_URL}/privacidad">Política de tratamiento de datos</a>.`,
       HELP,
     ].join('\n\n'),
     { parse_mode: 'HTML', link_preview_options: { is_disabled: true } },
   )
+}
+
+/** Si agregan a Luka a un grupo sin el botón del panel, explica cómo conectarlo (si nadie lo conecta en unos segundos). */
+bot.on('message:new_chat_members', async (ctx) => {
+  if (!ctx.message.new_chat_members.some((u) => u.id === ctx.me.id)) return
+  await new Promise((r) => setTimeout(r, 5000)) // el /start del botón del panel llega casi al mismo tiempo
+  if (await familyForChat(ctx.chat.id)) return
+  return ctx.reply(
+    [
+      '👋 ¡Hola! Soy Luka, el contador de la familia.',
+      'Para conectar este grupo, quien creó la familia en el panel debe entrar a Familia y tocar «Conectar con Telegram», o escribir aquí /vincular seguido del código que aparece en esa página.',
+      `Guía con video: ${APP_URL}/como-conectar`,
+    ].join('\n\n'),
+    { link_preview_options: { is_disabled: true } },
+  )
+})
+
+/** Telegram cambia el identificador del grupo al convertirlo en supergrupo: se actualiza para no perder la conexión. */
+bot.on('message:migrate_to_chat_id', async (ctx) => {
+  await db.from('families').update({ telegram_chat_id: ctx.message.migrate_to_chat_id }).eq('telegram_chat_id', ctx.chat.id)
 })
 
 /** "Soy yo": une el usuario de Telegram de quien escribe con su cuenta web, usando el código del panel. */
