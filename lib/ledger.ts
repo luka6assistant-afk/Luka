@@ -1,7 +1,7 @@
 import 'server-only'
 import { createAdminClient } from './supabase/server'
 import { extractTransaction, interpretEdit, type EditPatch, type Extraction, type ExtractionInput } from './extract'
-import { getMonthSummary } from './finance'
+import { getDebtMonth, getMonthSummary } from './finance'
 import { money, todayISO } from './format'
 import { getAccess } from './plans'
 import { FEATURES } from './features'
@@ -54,6 +54,12 @@ const daysLeftInMonth = () => {
  */
 export async function budgetNotice(fam: Family, tx: Transaction): Promise<BudgetNotice> {
   const none = { line: null, alert: null }
+  if (tx.kind === 'debt_payment' && tx.debt_id && tx.status === 'confirmed') {
+    const line = (await getDebtMonth(db, fam.id)).find((l) => l.debt.id === tx.debt_id)
+    if (!line) return none
+    const cuota = Number(line.debt.monthly_payment) > 0 ? (line.due > 0 ? ` · faltan ${money(line.due)} de la cuota del mes` : ' · cuota del mes pagada ✓') : ''
+    return { line: `💳 ${line.debt.name}: saldo ${money(line.debt.balance)}${cuota}.`, alert: null }
+  }
   if (tx.kind !== 'expense' || !tx.category_id) return none
   const month = todayISO().slice(0, 8) + '01'
   if (tx.occurred_on < month) return none // movimientos de meses anteriores no afectan el presupuesto de este mes

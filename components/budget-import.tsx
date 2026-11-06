@@ -5,7 +5,7 @@ import { applyBudgetImport, previewBudgetImport, type ImportState } from '@/app/
 import { Card } from './cards'
 import { SubmitButton } from './ui'
 
-type Row = { include: boolean; name: string; kind: string; icon: string; amount: number; target: string; note: string | null }
+type Row = { include: boolean; name: string; kind: string; icon: string; amount: number; target: string; note: string | null; balance: number | null; rate: number | null }
 
 const fmt = (n: number) => new Intl.NumberFormat('es-CO').format(n)
 
@@ -19,8 +19,8 @@ export function BudgetImport() {
       ) : (
         <form action={previewAction} className="space-y-3 text-sm">
           <p className="text-slate-700">
-            Sube tu presupuesto en Excel (.xlsx) o .csv, como lo tengas organizado. Luka identifica las categorías y los montos, y te
-            muestra todo para revisarlo antes de guardar.
+            Sube tu presupuesto en Excel (.xlsx) o .csv, como lo tengas organizado. Luka identifica las categorías, los ingresos y cada
+            deuda por separado, y te muestra todo para revisarlo antes de guardar.
           </p>
           <label htmlFor="budget-file" className="label">
             Archivo
@@ -45,11 +45,14 @@ function ImportReview({ preview }: { preview: Extract<ImportState, { items: unkn
       amount: it.monthly_amount,
       target: it.target,
       note: it.note,
+      balance: it.balance ?? null,
+      rate: it.annual_rate_pct ?? null,
     })),
   )
   const [result, applyAction] = useActionState<ImportState, FormData>(applyBudgetImport, undefined)
   const set = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)))
   const total = rows.filter((r) => r.include && r.kind === 'expense').reduce((s, r) => s + r.amount, 0)
+  const debtTotal = rows.filter((r) => r.include && r.kind === 'debt').reduce((s, r) => s + r.amount, 0)
 
   if (result && 'ok' in result)
     return (
@@ -93,19 +96,51 @@ function ImportReview({ preview }: { preview: Extract<ImportState, { items: unkn
               />
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 pl-6">
-              <select value={r.target} onChange={(e) => set(i, { target: e.target.value })} aria-label={`Destino de ${r.name}`} className="input w-auto py-1 text-xs">
-                <option value="new">➕ Crear categoría nueva</option>
-                {preview.existing.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    Actualizar {c.icon} {c.name}
-                  </option>
-                ))}
+              <select
+                value={r.kind}
+                onChange={(e) => set(i, { kind: e.target.value, target: 'new' })}
+                aria-label={`Tipo de ${r.name}`}
+                className="input w-auto py-1 text-xs"
+              >
+                <option value="expense">Gasto</option>
+                <option value="income">Ingreso</option>
+                <option value="debt">Deuda</option>
               </select>
-              {r.target === 'new' && (
-                <select value={r.kind} onChange={(e) => set(i, { kind: e.target.value })} aria-label="Tipo" className="input w-auto py-1 text-xs">
-                  <option value="expense">Gasto</option>
-                  <option value="income">Ingreso</option>
-                </select>
+              <select value={r.target} onChange={(e) => set(i, { target: e.target.value })} aria-label={`Destino de ${r.name}`} className="input w-auto py-1 text-xs">
+                <option value="new">{r.kind === 'debt' ? '➕ Crear deuda nueva' : '➕ Crear categoría nueva'}</option>
+                {r.kind === 'debt'
+                  ? preview.debts.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        Actualizar 💳 {d.name}
+                      </option>
+                    ))
+                  : preview.existing
+                      .filter((c) => c.kind === r.kind)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          Actualizar {c.icon} {c.name}
+                        </option>
+                      ))}
+              </select>
+              {r.kind === 'debt' && (
+                <>
+                  <input
+                    value={r.balance ? fmt(r.balance) : ''}
+                    onChange={(e) => set(i, { balance: Number(e.target.value.replace(/\D/g, '')) || null })}
+                    placeholder="Saldo"
+                    inputMode="numeric"
+                    aria-label={`Saldo de ${r.name}`}
+                    className="input w-28 py-1 text-right text-xs tabular-nums"
+                  />
+                  <input
+                    value={r.rate ?? ''}
+                    onChange={(e) => set(i, { rate: Number(e.target.value.replace(',', '.')) || null })}
+                    placeholder="Tasa E.A. %"
+                    inputMode="decimal"
+                    aria-label={`Tasa de ${r.name}`}
+                    className="input w-24 py-1 text-right text-xs tabular-nums"
+                  />
+                </>
               )}
               {r.note && <span className="text-xs text-slate-600">ℹ️ {r.note}</span>}
             </div>
@@ -114,7 +149,12 @@ function ImportReview({ preview }: { preview: Extract<ImportState, { items: unkn
       </ul>
       <input type="hidden" name="rows" value={JSON.stringify(rows)} />
       <p className="text-slate-700">
-        Total de gastos seleccionados: <b className="tabular-nums">${fmt(total)}</b> al mes
+        Gastos seleccionados: <b className="tabular-nums">${fmt(total)}</b> al mes
+        {debtTotal > 0 && (
+          <>
+            {' '}· cuotas de deudas: <b className="tabular-nums">${fmt(debtTotal)}</b>
+          </>
+        )}
       </p>
       {result && 'error' in result && <p className="text-rose-700">{result.error}</p>}
       <div className="flex gap-2">

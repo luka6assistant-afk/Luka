@@ -2,7 +2,8 @@ import 'server-only'
 import { createHash, randomBytes } from 'node:crypto'
 import { createAdminClient } from '../supabase/server'
 import { applyEdit, broadcastBudgetAlert, budgetNotice, confirmTx, deleteTx, getFamilyTx, loadContext, memberName, recordMovement, setCategory } from '../ledger'
-import { goalsHtml, planHtml, summaryHtml } from '../replies'
+import { debtsHtml, goalsHtml, planHtml, summaryHtml } from '../replies'
+import { FEATURES } from '../features'
 import { monthlyReport } from '../reports'
 import { transcribe, transcriptionEnabled } from '../transcribe'
 import { getMonthSummary } from '../finance'
@@ -50,6 +51,7 @@ const HELP = [
   '• *resumen* — cómo va el mes',
   '• *pendientes* — movimientos por confirmar',
   '• *metas* — metas de ahorro',
+  ...(FEATURES.debts ? ['• *deudas* — saldos y cuotas del mes'] : []),
   '• *reporte* — resumen del mes con archivo (*reporte anterior* para el mes pasado)',
   '• *panel* — enlace para entrar al panel',
   '• *plan* — tu plan y lecturas usadas',
@@ -188,6 +190,10 @@ async function handleText(l: Linked, msg: WaMessage, text: string) {
       return sendText(phone, htmlToWa(await goalsHtml(l.fam)))
     case 'plan':
       return sendText(phone, htmlToWa(await planHtml(l.fam)))
+    case 'deudas':
+    case 'deuda':
+      if (FEATURES.debts) return sendText(phone, htmlToWa(await debtsHtml(l.fam)))
+      break
     case 'pendientes':
       return sendPending(l, phone)
     case 'reporte':
@@ -210,7 +216,7 @@ async function handleText(l: Linked, msg: WaMessage, text: string) {
   return register(l, msg, { type: 'text', text }, 'whatsapp_text')
 }
 
-const COMMANDS = new Set(['hola', 'ayuda', 'menu', 'help', 'inicio', 'start', 'resumen', 'metas', 'meta', 'ahorros', 'plan', 'pendientes', 'reporte', 'panel', 'invitar', 'privacidad'])
+const COMMANDS = new Set(['deudas', 'deuda', 'hola', 'ayuda', 'menu', 'help', 'inicio', 'start', 'resumen', 'metas', 'meta', 'ahorros', 'plan', 'pendientes', 'reporte', 'panel', 'invitar', 'privacidad'])
 
 // ---------------------------------------------------------------------
 // Archivos y notas de voz

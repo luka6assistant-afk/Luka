@@ -28,7 +28,7 @@ export default function TerminosPage() {
       <p>
         {L.product} ayuda a una familia a registrar y organizar su dinero. Recibe recibos, facturas, comprobantes y mensajes por
         Telegram o WhatsApp y los lee con inteligencia artificial. Además ofrece un panel web con movimientos, presupuesto,
-        proyecciones y metas de ahorro, y envía al chat un resumen mensual.
+        proyecciones, deudas y metas de ahorro, y envía al chat un resumen mensual.
       </p>
 
       <h2>2. No es asesoría financiera</h2>

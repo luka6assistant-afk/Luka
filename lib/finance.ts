@@ -138,6 +138,10 @@ export interface MonthSummary {
   projectedExpenses: number
   totalBudget: number
   byCategory: CategoryLine[]
+  /** Ingresos por categoría: lo esperado (monthly_budget) y lo recibido este mes */
+  incomeLines: { category: Category; expected: number; received: number }[]
+  /** Suma de los ingresos esperados al mes */
+  expectedIncome: number
   uncategorized: number
   pendingCount: number
 }
@@ -188,6 +192,14 @@ export async function getMonthSummary(
     })
     .sort((a, b) => b.spent - a.spent)
 
+  const incomeLines = categories
+    .filter((c) => c.kind === 'income')
+    .map((category) => ({
+      category,
+      expected: Number(category.monthly_budget),
+      received: rows.filter((t) => t.kind === 'income' && t.category_id === category.id).reduce((s, t) => s + Number(t.amount), 0),
+    }))
+
   const expenses = sum('expense')
   const income = sum('income')
   const debtPayments = sum('debt_payment')
@@ -202,6 +214,8 @@ export async function getMonthSummary(
     projectedExpenses: Math.round(expenses * factor),
     totalBudget: byCategory.reduce((s, c) => s + c.budget, 0),
     byCategory,
+    incomeLines,
+    expectedIncome: incomeLines.reduce((s, l) => s + l.expected, 0),
     uncategorized: rows
       .filter((t) => t.kind === 'expense' && !t.category_id)
       .reduce((s, t) => s + Number(t.amount), 0),
@@ -266,4 +280,31 @@ export function projectAhead(history: MonthPoint[], current: MonthSummary, month
 export function shiftMonth(month: string, delta: number): string {
   const [y, m] = month.split('-').map(Number)
   return new Date(Date.UTC(y, m - 1 + delta, 1)).toISOString().slice(0, 10)
+}
+
+export interface DebtMonthLine {
+  debt: Debt
+  /** Abonado este mes (movimientos confirmados de tipo abono a esta deuda) */
+  paid: number
+  /** Lo que falta de la cuota del mes (0 si ya se pagó) */
+  due: number
+}
+
+/** Cuota de cada deuda activa en el mes: cuánto se ha abonado y cuánto falta. */
+export async function getDebtMonth(db: SupabaseClient, familyId: string, month = monthStart(0)): Promise<DebtMonthLine[]> {
+  const [{ data: debts }, { data: pays }] = await Promise.all([
+    db.from('debts').select('*').eq('family_id', familyId).eq('active', true).order('name'),
+    db
+      .from('transactions')
+      .select('debt_id, amount')
+      .eq('family_id', familyId)
+      .eq('kind', 'debt_payment')
+      .eq('status', 'confirmed')
+      .gte('occurred_on', month)
+      .lt('occurred_on', shiftMonth(month, 1)),
+  ])
+  return ((debts ?? []) as Debt[]).map((debt) => {
+    const paid = (pays ?? []).filter((p) => p.debt_id === debt.id).reduce((s, p) => s + Number(p.amount), 0)
+    return { debt, paid, due: Math.max(0, Number(debt.monthly_payment) - paid) }
+  })
 }

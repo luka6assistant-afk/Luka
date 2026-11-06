@@ -45,8 +45,8 @@ export default function PrivacidadPage() {
           quienes escriben en el chat vinculado, y número de WhatsApp y nombre de perfil de quienes le escriben a Luka por WhatsApp.
         </li>
         <li>
-          <b>Financieros de la familia:</b> montos, fechas, comercios, descripciones, categorías, medios de pago, presupuestos y
-          metas de ahorro.
+          <b>Financieros de la familia:</b> montos, fechas, comercios, descripciones, categorías, medios de pago, presupuestos,
+          deudas (saldos, tasas y cuotas) y metas de ahorro.
         </li>
         <li>
           <b>Imágenes y documentos</b> que se envían al bot (recibos, facturas, comprobantes, capturas de pantalla) y la

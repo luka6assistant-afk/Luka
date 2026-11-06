@@ -43,7 +43,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     yearlyPrice: 249_000,
     aiLimit: 1_000,
     debts: true,
-    features: ['Todo lo del plan Familia', '1.000 lecturas con IA al mes, ideal para familias grandes'],
+    features: ['Todo lo del plan Familia', '1.000 lecturas con IA al mes, ideal para familias grandes', 'Deudas: saldos, cuotas del mes y plan para salir de ellas'],
   },
 }
 

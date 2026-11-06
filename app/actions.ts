@@ -469,6 +469,7 @@ export type ImportState =
   | {
       items: (import('@/lib/budget-import').BudgetItem & { target: string })[]
       existing: { id: string; name: string; kind: string; icon: string }[]
+      debts: { id: string; name: string }[]
       file: string
     }
 
@@ -483,14 +484,17 @@ export async function previewBudgetImport(_: ImportState, fd: FormData): Promise
   try {
     text = await sheetToText(Buffer.from(await file.arrayBuffer()), file.name)
   } catch (e) {
-    return { error: e instanceof Error && e.message.startsWith('Formato') ? e.message : 'No pude abrir el archivo. Guárdalo como .xlsx o .csv e inténtalo de nuevo.' }
+    console.error('Error leyendo el archivo del presupuesto', file.name, file.type, file.size, e)
+    return { error: e instanceof Error && /^(Formato|No pude|No encontré)/.test(e.message) ? e.message : 'No pude abrir el archivo. Guárdalo como .csv e inténtalo de nuevo.' }
   }
   if (!text.trim()) return { error: 'El archivo está vacío.' }
   const { data: cats } = await supabase.from('categories').select('*').eq('family_id', family.id).order('name')
   const existing = (cats ?? []) as import('@/lib/types').Category[]
+  const { data: debtRows } = await supabase.from('debts').select('id, name').eq('family_id', family.id).eq('active', true)
+  const debts = (debtRows ?? []) as { id: string; name: string }[]
   let result: Awaited<ReturnType<typeof interpretBudgetSheet>>
   try {
-    result = await interpretBudgetSheet(text, existing)
+    result = await interpretBudgetSheet(text, existing, debts)
   } catch (e) {
     console.error('Error leyendo presupuesto', e)
     return { error: 'No pude leer el presupuesto en este momento. Intenta de nuevo.' }
@@ -500,7 +504,12 @@ export async function previewBudgetImport(_: ImportState, fd: FormData): Promise
   return {
     file: file.name,
     existing: existing.map((c) => ({ id: c.id, name: c.name, kind: c.kind, icon: c.icon })),
+    debts,
     items: result.items.map((it) => {
+      if (it.kind === 'debt') {
+        const d = debts.find((x) => x.name.toLowerCase() === (it.existing_debt ?? it.name).toLowerCase())
+        return { ...it, monthly_amount: Math.max(0, Math.round(it.monthly_amount)), target: d ? d.id : 'new' }
+      }
       const match = (it.existing_category && byName.get(it.existing_category.toLowerCase())) || byName.get(it.name.toLowerCase())
       return { ...it, monthly_amount: Math.max(0, Math.round(it.monthly_amount)), target: match ? match.id : 'new' }
     }),
@@ -510,7 +519,7 @@ export async function previewBudgetImport(_: ImportState, fd: FormData): Promise
 /** Paso 2: aplica lo que la persona revisó: actualiza presupuestos o crea categorías nuevas. */
 export async function applyBudgetImport(_: ImportState, fd: FormData): Promise<ImportState> {
   const { supabase, family } = await requireAdmin()
-  let rows: { include: boolean; name: string; kind: string; icon: string; amount: number; target: string }[]
+  let rows: { include: boolean; name: string; kind: string; icon: string; amount: number; target: string; balance?: number | null; rate?: number | null }[]
   try {
     rows = JSON.parse(str(fd, 'rows'))
   } catch {
@@ -518,10 +527,30 @@ export async function applyBudgetImport(_: ImportState, fd: FormData): Promise<I
   }
   const { data: cats } = await supabase.from('categories').select('id, name').eq('family_id', family.id)
   const ids = new Set((cats ?? []).map((c) => c.id))
+  const { data: debtRows } = await supabase.from('debts').select('id').eq('family_id', family.id)
+  const debtIds = new Set((debtRows ?? []).map((d) => d.id))
   let updated = 0
   let created = 0
+  let debtsCount = 0
   for (const r of rows.filter((r) => r.include).slice(0, 40)) {
     const amountValue = Math.max(0, Math.round(Number(r.amount) || 0))
+    if (r.kind === 'debt') {
+      // Cada deuda por separado: cuota mensual, saldo y tasa (si venían en la hoja)
+      const debt: Record<string, unknown> = { monthly_payment: amountValue }
+      if (r.balance != null && Number(r.balance) > 0) debt.balance = Math.round(Number(r.balance))
+      if (r.rate != null && Number(r.rate) > 0) debt.annual_rate = Number(r.rate) / 100
+      if (r.target !== 'new' && debtIds.has(r.target)) {
+        const { error } = await supabase.from('debts').update(debt).eq('id', r.target).eq('family_id', family.id)
+        if (!error) debtsCount++
+      } else {
+        const name = String(r.name ?? '').trim().slice(0, 60)
+        if (!name) continue
+        const balance = (debt.balance as number | undefined) ?? 0
+        const { error } = await supabase.from('debts').insert({ family_id: family.id, name, ...debt, balance, original_amount: balance })
+        if (!error) debtsCount++
+      }
+      continue
+    }
     if (r.target !== 'new' && ids.has(r.target)) {
       const { error } = await supabase.from('categories').update({ monthly_budget: amountValue }).eq('id', r.target).eq('family_id', family.id)
       if (!error) updated++
@@ -542,5 +571,7 @@ export async function applyBudgetImport(_: ImportState, fd: FormData): Promise<I
     if (!error) created++
   }
   revalidatePath('/', 'layout')
-  return { ok: `Listo: se actualizaron ${updated} categoría(s) y se crearon ${created} nueva(s).` }
+  return {
+    ok: `Listo: se actualizaron ${updated} categoría(s), se crearon ${created} nueva(s)${debtsCount ? ` y se cargaron ${debtsCount} deuda(s)` : ''}.${debtsCount ? ' Completa el saldo de cada deuda en Deudas si no venía en el archivo.' : ''}`,
+  }
 }

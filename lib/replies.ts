@@ -1,6 +1,6 @@
 import 'server-only'
 import { createAdminClient } from './supabase/server'
-import { getMonthSummary, requiredMonthly } from './finance'
+import { debtPayoff, getDebtMonth, getMonthSummary, requiredMonthly } from './finance'
 import { money, monthLabel } from './format'
 import { getAccess } from './plans'
 import { loadContext } from './ledger'
@@ -69,4 +69,28 @@ export async function planHtml(fam: Family) {
     ? `${a.plan.id === 'trial' ? 'Prueba gratis' : `Activo hasta el ${a.until.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}`} · quedan ${a.daysLeft} día(s)`
     : '⛔ Vencido: los recibos no se están leyendo'
   return [`<b>Plan ${a.plan.name}</b>`, status, `Lecturas con IA este mes: ${a.used} de ${a.plan.aiLimit}`, '', `Pagar o cambiar de plan: ${APP_URL}/plan`].join('\n')
+}
+
+/** Deudas: saldo, cuota del mes (pagada o pendiente) y fecha estimada de pago. */
+export async function debtsHtml(fam: Family) {
+  const lines = await getDebtMonth(db, fam.id)
+  if (!lines.length) return `No hay deudas registradas. Agréguenlas en el panel: ${APP_URL}/deudas`
+  const total = lines.reduce((s, l) => s + Number(l.debt.balance), 0)
+  const dueTotal = lines.reduce((s, l) => s + l.due, 0)
+  return [
+    `<b>💳 Deudas — saldo total ${money(total)}</b>`,
+    dueTotal > 0 ? `Cuotas pendientes este mes: <b>${money(dueTotal)}</b>` : '✅ Todas las cuotas del mes están pagadas',
+    '',
+    ...lines.map(({ debt: d, paid, due }) => {
+      const plan = debtPayoff(Number(d.balance), Number(d.annual_rate), Number(d.monthly_payment))
+      const eta =
+        plan.months === null
+          ? '⚠️ la cuota no cubre los intereses'
+          : plan.months === 0
+            ? '🎉 pagada'
+            : `termina ≈ ${monthLabel(plan.payoffDate!)}`
+      const month = Number(d.monthly_payment) > 0 ? (due > 0 ? `faltan ${money(due)} de la cuota${paid > 0 ? ` (abonado ${money(paid)})` : ''}` : 'cuota del mes pagada ✓') : ''
+      return `💳 <b>${escapeHtml(d.name)}</b>: saldo ${money(d.balance)}\n   ${[month, d.due_day ? `paga el ${d.due_day}` : '', eta].filter(Boolean).join(' · ')}`
+    }),
+  ].join('\n')
 }

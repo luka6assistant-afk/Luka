@@ -1,5 +1,5 @@
 import { requireFamily } from '@/lib/session'
-import { debtPayoff, multiDebtPlan } from '@/lib/finance'
+import { debtPayoff, getDebtMonth, multiDebtPlan } from '@/lib/finance'
 import { money, monthLabel, monthStart, parseCOP } from '@/lib/format'
 import type { Debt } from '@/lib/types'
 import { archiveDebt, quickMovement, saveDebt } from '@/app/actions'
@@ -53,6 +53,8 @@ export default async function DeudasPage(props: PageProps<'/deudas'>) {
   if (!(await getAccess(supabase, family)).plan.debts) return <PlusUpsell feature="El plan de deudas" />
   const { data } = await supabase.from('debts').select('*').eq('family_id', family.id).eq('active', true).order('balance', { ascending: false })
   const debts = (data ?? []) as Debt[]
+  const month = await getDebtMonth(supabase, family.id)
+  const dueTotal = month.reduce((s, l) => s + l.due, 0)
 
   const total = debts.reduce((s, d) => s + Number(d.balance), 0)
   const minSum = debts.reduce((s, d) => s + Number(d.monthly_payment), 0)
@@ -65,7 +67,7 @@ export default async function DeudasPage(props: PageProps<'/deudas'>) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Stat label="Deuda total" value={money(total)} tone={total > 0 ? 'bad' : 'good'} />
         <Stat label="Cuotas mínimas / mes" value={money(minSum)} />
-        <Stat label="Deudas activas" value={String(debts.length)} />
+        <Stat label="Falta pagar este mes" value={money(dueTotal)} tone={dueTotal > 0 ? 'default' : 'good'} hint={dueTotal > 0 ? undefined : 'Cuotas del mes al día'} />
       </div>
 
       {debts.length === 0 ? (
@@ -75,6 +77,7 @@ export default async function DeudasPage(props: PageProps<'/deudas'>) {
           {debts.map((d) => {
             const plan = debtPayoff(Number(d.balance), Number(d.annual_rate), Number(d.monthly_payment))
             const paid = Number(d.original_amount) - Number(d.balance)
+            const m = month.find((l) => l.debt.id === d.id)
             return (
               <Card key={d.id} title={`💳 ${d.name}`} action={<span className="text-xs text-slate-500">{d.creditor}</span>}>
                 <p className="text-2xl font-semibold tabular-nums">{money(d.balance)}</p>
@@ -90,6 +93,13 @@ export default async function DeudasPage(props: PageProps<'/deudas'>) {
                   {(Number(d.annual_rate) * 100).toFixed(1)}% E.A. · cuota {money(d.monthly_payment)}
                   {d.due_day ? ` · día ${d.due_day}` : ''}
                 </p>
+                {Number(d.monthly_payment) > 0 && m && (
+                  <p className={`mt-2 rounded-lg px-3 py-2 text-sm ${m.due > 0 ? 'bg-amber-50 text-amber-900' : 'bg-brand-50 text-brand-700'}`}>
+                    {m.due > 0
+                      ? `Este mes: faltan ${money(m.due)} de la cuota${m.paid > 0 ? ` (abonado ${money(m.paid)})` : ''}`
+                      : `Este mes: cuota pagada ✓ (${money(m.paid)})`}
+                  </p>
+                )}
                 <p className={`mt-1 text-sm ${plan.months === null ? 'text-rose-600' : 'text-slate-600'}`}>
                   {plan.months === null
                     ? '⚠️ La cuota no alcanza a cubrir los intereses: la deuda crece.'

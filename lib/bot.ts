@@ -4,13 +4,12 @@ import type { Message, User } from 'grammy/types'
 import { createAdminClient } from './supabase/server'
 import type { Extraction, ExtractionInput } from './extract'
 import { transcribe, transcriptionEnabled } from './transcribe'
-import { debtPayoff } from './finance'
 import { money, monthLabel, monthStart, dateLabel } from './format'
 import { monthlyReport } from './reports'
 import { PLANS, REFERRAL_DAYS, getAccess } from './plans'
 import { LEGAL } from './legal'
 import { FEATURES } from './features'
-import { escapeHtml, goalsHtml, planHtml, summaryHtml } from './replies'
+import { debtsHtml, escapeHtml, goalsHtml, planHtml, summaryHtml } from './replies'
 import { alertHtml, applyEdit, budgetNotice, confirmTx, deleteTx, getFamilyTx, loadContext, memberName, recordMovement, setCategory } from './ledger'
 import { KIND_LABEL, type Category, type Debt, type Family, type Member, type SavingsGoal, type Transaction } from './types'
 
@@ -336,20 +335,7 @@ bot.command('deudas', async (ctx) => {
   const fam = await requireFamily(ctx)
   if (!fam) return
   if (!(await requireDebts(ctx, fam))) return
-  const { debts } = await loadContext(fam.id)
-  if (!debts.length) return ctx.reply(`No hay deudas registradas. Agréguenlas en el panel: ${APP_URL}/deudas`)
-  const total = debts.reduce((s, d) => s + Number(d.balance), 0)
-  const lines = debts.map((d) => {
-    const plan = debtPayoff(Number(d.balance), Number(d.annual_rate), Number(d.monthly_payment))
-    const eta =
-      plan.months === null
-        ? '⚠️ la cuota no cubre los intereses'
-        : plan.months === 0
-          ? '🎉 pagada'
-          : `≈ ${plan.months} meses (${monthLabel(plan.payoffDate!)}), intereses ≈ ${money(plan.totalInterest)}`
-    return `💳 <b>${escapeHtml(d.name)}</b>: ${money(d.balance)}\n   Cuota ${money(d.monthly_payment)}${d.due_day ? ` · paga el ${d.due_day}` : ''} · ${eta}`
-  })
-  return ctx.reply([`<b>Deudas — total ${money(total)}</b>`, '', ...lines].join('\n'), { parse_mode: 'HTML' })
+  return ctx.reply(await debtsHtml(fam), { parse_mode: 'HTML' })
 })
 
 /** Envía al chat el resumen de un mes con el CSV de movimientos. Lo usa /reporte y el cron del día 1. */

@@ -1,5 +1,7 @@
 import { requireFamily } from '@/lib/session'
-import { getHistory, getMonthSummary } from '@/lib/finance'
+import { getDebtMonth, getHistory, getMonthSummary } from '@/lib/finance'
+import { FEATURES } from '@/lib/features'
+import Link from 'next/link'
 import { money } from '@/lib/format'
 import type { Category } from '@/lib/types'
 import { addCategory, deleteCategory, saveAlertThreshold, saveBudgets } from '@/app/actions'
@@ -9,14 +11,19 @@ import { ConfirmButton, SubmitButton } from '@/components/ui'
 
 export default async function PresupuestoPage() {
   const { supabase, family, isAdmin } = await requireFamily()
-  const [summary, history, { data: cats }] = await Promise.all([
+  const [summary, history, { data: cats }, debtMonth] = await Promise.all([
     getMonthSummary(supabase, family.id),
     getHistory(supabase, family.id, 4),
     supabase.from('categories').select('*').eq('family_id', family.id).order('kind').order('name'),
+    FEATURES.debts ? getDebtMonth(supabase, family.id) : Promise.resolve([]),
   ])
+  const debtCuotas = debtMonth.reduce((s, l) => s + Number(l.debt.monthly_payment), 0)
+  const debtDue = debtMonth.reduce((s, l) => s + l.due, 0)
   const categories = (cats ?? []) as Category[]
+  const lumpDebtCategory = categories.find((c) => c.kind === 'expense' && /^deuda/i.test(c.name) && Number(c.monthly_budget) > 0)
   const closed = history.slice(0, -1).filter((p) => p.income > 0)
-  const avgIncome = closed.length ? closed.reduce((s, p) => s + p.income, 0) / closed.length : summary.income
+  const avgIncome = summary.expectedIncome > 0 ? summary.expectedIncome : closed.length ? closed.reduce((s, p) => s + p.income, 0) / closed.length : summary.income
+  const incomeLabel = summary.expectedIncome > 0 ? 'Ingresos esperados' : 'Ingreso promedio'
   const totalBudget = categories.filter((c) => c.kind === 'expense').reduce((s, c) => s + Number(c.monthly_budget), 0)
   const threshold = family.alert_threshold ?? 80
   const totalSpent = summary.byCategory.filter((l) => l.budget > 0).reduce((s, l) => s + l.spent, 0)
@@ -88,7 +95,7 @@ export default async function PresupuestoPage() {
         <Card title="¿Alcanza?">
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-600">Ingreso promedio</dt>
+              <dt className="text-slate-600">{incomeLabel}</dt>
               <dd className="font-medium tabular-nums">{money(avgIncome)}</dd>
             </div>
             <div className="flex justify-between">
@@ -106,6 +113,40 @@ export default async function PresupuestoPage() {
             Regla de referencia 50/30/20: {money(avgIncome * 0.5)} necesidades · {money(avgIncome * 0.3)} gustos · {money(avgIncome * 0.2)} ahorro y deudas.
           </p>
         </Card>
+
+        {FEATURES.debts && (
+          <Card title="💳 Cuotas de deudas del mes" action={<Link href="/deudas" className="text-sm text-brand-700">Ver deudas</Link>}>
+            {debtMonth.length === 0 ? (
+              <p className="text-sm text-slate-700">
+                Aún no hay deudas registradas. Agrégalas una por una en <Link href="/deudas" className="font-medium text-brand-700 underline">Deudas</Link>{' '}
+                o impórtalas desde tu Excel: cada abono descuenta del saldo y de la cuota del mes.
+              </p>
+            ) : (
+              <>
+                <ul className="space-y-2 text-sm">
+                  {debtMonth.map((l) => (
+                    <li key={l.debt.id} className="flex items-center justify-between gap-2">
+                      <span>💳 {l.debt.name}</span>
+                      <span className={`tabular-nums ${l.due > 0 ? 'text-slate-700' : 'text-brand-700'}`}>
+                        {Number(l.debt.monthly_payment) <= 0 ? money(l.paid) : l.due > 0 ? `faltan ${money(l.due)}` : 'pagada ✓'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-600">
+                  Cuotas del mes <b className="tabular-nums">{money(debtCuotas)}</b> · faltan{' '}
+                  <b className={`tabular-nums ${debtDue > 0 ? 'text-slate-800' : 'text-brand-700'}`}>{money(debtDue)}</b>
+                </p>
+                {lumpDebtCategory && (
+                  <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+                    La categoría {lumpDebtCategory.icon} {lumpDebtCategory.name} tiene {money(Number(lumpDebtCategory.monthly_budget))} presupuestados. Ahora que
+                    las deudas están desglosadas, ponla en 0 para no contar las cuotas dos veces.
+                  </p>
+                )}
+              </>
+            )}
+          </Card>
+        )}
 
         <Card title="🔔 Alertas de presupuesto">
           <p className="text-sm text-slate-700">
@@ -150,24 +191,52 @@ export default async function PresupuestoPage() {
         </Card>
         )}
 
-        <Card title="Categorías de ingreso">
-          <ul className="space-y-1 text-sm">
-            {categories
-              .filter((c) => c.kind === 'income')
-              .map((c) => (
-                <li key={c.id} className="flex items-center justify-between">
+        <Card title="💰 Ingresos del mes">
+          <form action={saveBudgets} className="space-y-3">
+            {summary.incomeLines.map((l) => (
+              <div key={l.category.id} className="grid grid-cols-[1fr_8rem] items-center gap-2 text-sm">
+                <div>
+                  <p>
+                    {l.category.icon} {l.category.name}
+                  </p>
+                  <p className={`text-xs tabular-nums ${l.expected > 0 && l.received >= l.expected ? 'text-brand-700' : 'text-slate-600'}`}>
+                    Recibido {money(l.received)}
+                    {l.expected > 0 && (l.received >= l.expected ? ' ✓' : ` · faltan ${money(l.expected - l.received)}`)}
+                  </p>
+                </div>
+                <input
+                  name={`budget:${l.category.id}`}
+                  defaultValue={l.expected ? l.expected.toLocaleString('es-CO') : ''}
+                  aria-label={`Ingreso esperado de ${l.category.name}`}
+                  placeholder="Esperado"
+                  inputMode="decimal"
+                  readOnly={!isAdmin}
+                  className="input text-right tabular-nums read-only:bg-slate-50"
+                />
+              </div>
+            ))}
+            <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-sm">
+              <span className="text-slate-600">
+                Esperado <b className="tabular-nums">{money(summary.expectedIncome)}</b> · recibido{' '}
+                <b className="tabular-nums">{money(summary.income)}</b>
+              </span>
+              {isAdmin && <SubmitButton>Guardar</SubmitButton>}
+            </div>
+          </form>
+          {isAdmin && (
+            <ul className="mt-3 space-y-1 border-t border-slate-100 pt-3 text-xs text-slate-600">
+              {summary.incomeLines.map((l) => (
+                <li key={l.category.id} className="flex items-center justify-between">
                   <span>
-                    {c.icon} {c.name}
+                    Borrar {l.category.icon} {l.category.name}
                   </span>
-                  {isAdmin && (
-                    <form action={deleteCategory}>
-                      <input type="hidden" name="id" value={c.id} />
-                      <ConfirmButton message={`¿Borrar ${c.name}?`}>🗑</ConfirmButton>
-                    </form>
-                  )}
+                  <ConfirmButton message={`¿Borrar ${l.category.name}?`} form={`del-${l.category.id}`} title={`Borrar ${l.category.name}`}>
+                    🗑
+                  </ConfirmButton>
                 </li>
               ))}
-          </ul>
+            </ul>
+          )}
         </Card>
       </div>
     </div>
