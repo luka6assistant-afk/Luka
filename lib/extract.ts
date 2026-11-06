@@ -39,6 +39,8 @@ export interface ExtractionContext {
   debts: Debt[]
   goals: SavingsGoal[]
   senderName: string
+  /** Módulo de deudas activo: los abonos van a la deuda (no a una categoría de gasto) */
+  debtsEnabled?: boolean
 }
 
 type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
@@ -50,6 +52,7 @@ export type ExtractionInput =
 
 function systemPrompt(ctx: ExtractionContext): string {
   const expenseCats = ctx.categories.filter((c) => c.kind === 'expense').map((c) => c.name)
+  const shownExpense = ctx.debtsEnabled ? expenseCats.filter((n) => !/^deudas?$/i.test(n)) : expenseCats
   const incomeCats = ctx.categories.filter((c) => c.kind === 'income').map((c) => c.name)
   return [
     'Eres el contador de una familia colombiana. Recibes capturas de pantalla, fotos de recibos, facturas',
@@ -60,14 +63,14 @@ function systemPrompt(ctx: ExtractionContext): string {
     '- Montos en COP. En Colombia el punto separa miles y la coma decimales: "$45.900" = 45900.',
     '- Usa el TOTAL a pagar (con IVA y propina), no subtotales.',
     `- Hoy es ${todayISO()}. Si no aparece la fecha, usa hoy. "ayer" = el día anterior.`,
-    ctx.debts.length
-      ? '- Un comprobante de transferencia/pago a un banco o tarjeta que coincida con una deuda es debt_payment.'
+    ctx.debtsEnabled || ctx.debts.length
+      ? '- Cuotas, abonos o pagos de tarjetas, créditos, préstamos, lotes o vehículos son debt_payment; pon en debt_name la deuda que coincida (o null si ninguna coincide).'
       : '- Cuotas, abonos o pagos de tarjetas de crédito y préstamos: kind=expense con la categoría "Deudas" (nunca debt_payment).',
     '- "ahorré", "aparté", "guardé para ..." es saving (aporte a una meta, no es una categoría de gasto). Salario, pago recibido, venta es income.',
     '- Si no es un movimiento financiero (memes, fotos, conversación), is_financial=false y amount=0.',
     `- Quien envía el mensaje: ${ctx.senderName}.`,
     '',
-    `Categorías de gasto: ${expenseCats.join(', ') || '(ninguna)'}`,
+    `Categorías de gasto: ${shownExpense.join(', ') || '(ninguna)'}`,
     `Categorías de ingreso: ${incomeCats.join(', ') || '(ninguna)'}`,
     `Deudas activas: ${ctx.debts.map((d) => d.name).join(', ') || '(ninguna)'}`,
     `Metas de ahorro: ${ctx.goals.map((g) => g.name).join(', ') || '(ninguna)'}`,

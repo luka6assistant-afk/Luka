@@ -148,7 +148,7 @@ export async function recordMovement(opts: {
 
   let ex: Extraction | null
   try {
-    ex = await extractTransaction(opts.input, { categories: ctx.categories, debts: FEATURES.debts ? ctx.debts : [], goals: ctx.goals, senderName: member.display_name })
+    ex = await extractTransaction(opts.input, { categories: ctx.categories, debts: FEATURES.debts ? ctx.debts : [], goals: ctx.goals, senderName: member.display_name, debtsEnabled: FEATURES.debts })
     await db.rpc('increment_ai_usage', { fid: fam.id })
   } catch (err) {
     console.error('Error extrayendo', err)

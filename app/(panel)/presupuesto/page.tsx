@@ -19,7 +19,8 @@ export default async function PresupuestoPage() {
   ])
   const debtCuotas = debtMonth.reduce((s, l) => s + Number(l.debt.monthly_payment), 0)
   const debtDue = debtMonth.reduce((s, l) => s + l.due, 0)
-  const categories = (cats ?? []) as Category[]
+  // Con el módulo de deudas activo, la categoría de gasto "Deudas" sin monto no se muestra (las cuotas van en Deudas)
+  const categories = ((cats ?? []) as Category[]).filter((c) => !(FEATURES.debts && c.kind === 'expense' && /^deudas?$/i.test(c.name) && Number(c.monthly_budget) <= 0))
   const lumpDebtCategory = categories.find((c) => c.kind === 'expense' && /^deuda/i.test(c.name) && Number(c.monthly_budget) > 0)
   const closed = history.slice(0, -1).filter((p) => p.income > 0)
   const avgIncome = summary.expectedIncome > 0 ? summary.expectedIncome : closed.length ? closed.reduce((s, p) => s + p.income, 0) / closed.length : summary.income
